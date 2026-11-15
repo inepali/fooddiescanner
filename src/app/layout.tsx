@@ -3,12 +3,12 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL ?? "https://www.fooddiescanner.com"),
-  title: { default: "Foodie Scanner — Know what’s really in your food", template: "%s · Foodie Scanner" },
+  title: { default: "Fooddie Scanner — Know what’s really in your food", template: "%s · Fooddie Scanner" },
   description:
     "A free, searchable library of food label breakdowns. Every scanned product is scored ingredient by ingredient, in plain English.",
   manifest: "/manifest.webmanifest",
   icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
-  appleWebApp: { capable: true, title: "Foodie Scanner", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Fooddie Scanner", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

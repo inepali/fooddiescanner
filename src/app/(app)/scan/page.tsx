@@ -33,7 +33,7 @@ export default async function Home() {
   return (
     <AppShell>
       <div className="space-y-6">
-        <LargeTitle title="Foodie Scanner" subtitle="Scan a label or barcode to see what’s really in your food." />
+        <LargeTitle title="Fooddie Scanner" subtitle="Scan a label or barcode to see what’s really in your food." />
         <ScanBuilder scanId={id} />
       </div>
     </AppShell>

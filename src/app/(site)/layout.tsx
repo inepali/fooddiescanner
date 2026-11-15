@@ -18,7 +18,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10" />
             </svg>
           </span>
-          <span className="font-display text-[22px] font-extrabold tracking-tight">Foodie Scanner</span>
+          <span className="font-display text-[22px] font-extrabold tracking-tight">Fooddie Scanner</span>
         </Link>
         <nav aria-label="Main" className="hidden items-center gap-7 text-[15px] font-medium md:flex">
           <Link href="/#recent" className="text-[#14201A] hover:text-[#1E6B45]">Browse scans</Link>
@@ -37,7 +37,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
         <div className="mx-auto flex max-w-6xl flex-col gap-10 px-5 pb-10 pt-16 sm:px-8">
           <div className="flex flex-wrap justify-between gap-10">
             <div className="max-w-sm space-y-3">
-              <p className="font-display text-2xl font-extrabold text-white">Foodie Scanner</p>
+              <p className="font-display text-2xl font-extrabold text-white">Fooddie Scanner</p>
               <p className="text-[15px] leading-relaxed">An open library of food label breakdowns. Search it, share it, and know what you’re eating.</p>
             </div>
             <nav aria-label="Library" className="flex flex-col gap-2.5 text-[15px]">
@@ -54,7 +54,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
             </nav>
           </div>
           <div className="flex flex-wrap justify-between gap-4 border-t border-[#2F3D35] pt-6 text-[13px] text-[#A9B5AD]">
-            <span>© {new Date().getFullYear()} Foodie Scanner · fooddiescanner.com</span>
+            <span>© {new Date().getFullYear()} Fooddie Scanner · fooddiescanner.com</span>
             <span>For general information only — not medical or dietary advice.</span>
           </div>
         </div>

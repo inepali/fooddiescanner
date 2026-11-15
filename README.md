@@ -1,4 +1,4 @@
-# Ingredient Scanner
+# Fooddie Scanner
 
 Personal tool: upload an ingredient-label photo plus product media, get a 0–100
 ingredient report, an AI-voiced 60s vertical video, and post copy. You download

@@ -1,6 +1,6 @@
 {
-  "name": "Foodie Scanner",
-  "short_name": "Foodie Scanner",
+  "name": "Fooddie Scanner",
+  "short_name": "Fooddie Scanner",
   "description": "Label photo in, health report and 60s social video out.",
   "start_url": "/scan",
   "display": "standalone",
