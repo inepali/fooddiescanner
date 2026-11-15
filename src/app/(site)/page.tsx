@@ -25,7 +25,7 @@ const STEPS = [
 
 const FAQ = [
   {
-    q: "What is Foodie Scanner?",
+    q: "What is Fooddie Scanner?",
     a: "A public library of food label breakdowns. Real products are scanned, their ingredients scored, and every published result is kept here so anyone can search and read it.",
   },
   {
@@ -158,7 +158,7 @@ export default async function Home() {
       <section id="scoring" className="scroll-mt-6 bg-[#14201A] text-[#F6F7F2]">
         <div className={`${wrap} flex flex-col gap-10 py-24`}>
           <div className="max-w-2xl space-y-3">
-            <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#F2B705]">The Foodie Score</p>
+            <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#F2B705]">The Fooddie Score</p>
             <h2 className={h2}>One number, with the reasoning shown.</h2>
             <p className="text-[17px] leading-relaxed text-[#C9D3CB]">
               Every product gets a score from 0 to 100. Open any breakdown to see exactly which ingredients moved it up or down, and why.

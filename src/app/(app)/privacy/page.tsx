@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import LegalPage, { CONTACT_EMAIL } from "@/components/LegalPage";
 
-export const metadata: Metadata = { title: "Privacy Policy · Foodie Scanner" };
+export const metadata: Metadata = { title: "Privacy Policy · Fooddie Scanner" };
 
 export default function Privacy() {
   return (
     <LegalPage title="Privacy Policy">
       <p>
-        Foodie Scanner is a personal tool run by its owner. This page explains what information it handles. In short: it does not sell
+        Fooddie Scanner is a personal tool run by its owner. This page explains what information it handles. In short: it does not sell
         data, does not track visitors and has no advertising.
       </p>
 
