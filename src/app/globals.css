@@ -56,3 +56,11 @@
     }
   }
 }
+
+/* Public library (fooddiescanner.com): its own fonts and look, scoped to the (site) layout. */
+.site {
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+.site .font-display {
+  font-family: var(--font-display), system-ui, sans-serif;
+}

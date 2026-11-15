@@ -5,8 +5,10 @@ import { NextResponse, type NextRequest } from "next/server";
 export function middleware(req: NextRequest) {
   const pass = process.env.APP_PASSWORD;
   if (!pass) return NextResponse.next();
-  // Public report pages (/p/<id>) are meant to be shared; they only show scans you turned public.
-  if (req.nextUrl.pathname.startsWith("/p/")) return NextResponse.next();
+  // The public library: home, search and report pages (/p/<id>). They only ever show scans you turned public.
+  const path = req.nextUrl.pathname;
+  if (path === "/" || path === "/search" || path.startsWith("/p/")) return NextResponse.next();
+  if (path === "/robots.txt" || path === "/sitemap.xml") return NextResponse.next();
   // Terms and Privacy must be public: TikTok, Google and Meta reviewers open them without a password.
   // The install manifest and icons are fetched without credentials, so they can't sit behind the password.
   if (/^\/(manifest\.webmanifest|icon-\d+\.png|apple-touch-icon\.png)$/.test(req.nextUrl.pathname)) return NextResponse.next();

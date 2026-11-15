@@ -2,8 +2,10 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Foodie Scanner",
-  description: "Label photo in, health report and 60s social video out.",
+  metadataBase: new URL(process.env.SITE_URL ?? "https://www.fooddiescanner.com"),
+  title: { default: "Foodie Scanner — Know what’s really in your food", template: "%s · Foodie Scanner" },
+  description:
+    "A free, searchable library of food label breakdowns. Every scanned product is scored ingredient by ingredient, in plain English.",
   manifest: "/manifest.webmanifest",
   icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
   appleWebApp: { capable: true, title: "Foodie Scanner", statusBarStyle: "default" },
@@ -16,12 +18,11 @@ export const viewport: Viewport = {
   themeColor: "#f2f2f7",
 };
 
+// Each route group adds its own frame: (app) is the private scanner tool, (site) is the public library.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
-        <main className="mx-auto max-w-2xl p-4 pb-28 sm:p-6 md:pb-6 has-[[data-wide]]:max-w-5xl">{children}</main>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
