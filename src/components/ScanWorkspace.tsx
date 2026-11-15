@@ -7,8 +7,8 @@ import { DEFAULT_DELIVERY, DELIVERIES, type Delivery } from "@/lib/delivery";
 import { withPublicLink } from "@/lib/public-link";
 import { REVEAL_CHOICES, type RevealChoice } from "@/lib/reveal";
 import { POSITIONS, type CustomLine, type LinePosition } from "@/lib/custom-lines";
+import { AUTO_LABEL, nextAutoStep, secondsLeft, type AutoStep } from "@/lib/auto-advance";
 import { MAX_UPLOADS, MAX_UPLOAD_BYTES, videoTypeFor } from "@/lib/uploads";
-import { CLIP_SECONDS, PRICE_PER_SECOND, estimateCostUsd, type Resolution } from "@/lib/pricing";
 
 export type StudioMedia = {
   id: string;
@@ -77,11 +77,10 @@ export type StudioProps = {
   renderProgress: { stage?: string; percent?: number } | null;
   copy: StudioCopy[];
   social: StudioSocial;
-  pendingJobs: { id: string; media_id: string | null }[];
-  maxClips: number;
-  defaultResolution: "480p" | "720p";
   /** When the score ring and rating badges appear in the video. */
   scoreReveal: RevealChoice;
+  /** The "Auto-advance steps" switch. */
+  autoAdvance: boolean;
   mock: boolean;
 };
 
@@ -108,16 +107,15 @@ function postJson<T>(url: string, body: unknown, method = "POST"): Promise<T> {
   });
 }
 
-type TabId = "ingredients" | "script" | "voice" | "animation" | "video" | "social" | "public" | "post";
+type TabId = "ingredients" | "script" | "voice" | "social" | "public" | "video" | "post";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "ingredients", label: "Ingredients" },
   { id: "script", label: "Script" },
   { id: "voice", label: "Voice" },
-  { id: "animation", label: "Animation" },
-  { id: "video", label: "Final Video" },
   { id: "social", label: "Social Copy" },
   { id: "public", label: "Public Page" },
+  { id: "video", label: "Final Video" },
   { id: "post", label: "Connect & Post" },
 ];
 
@@ -126,7 +124,7 @@ const btn =
 const card = "space-y-3 rounded-2xl bg-white p-4";
 
 export default function ScanWorkspace(props: StudioProps) {
-  const { ingredients, scriptPanel, scanId, media, hasScript, audioUrl, voiceTakes, copy, pendingJobs, maxClips, mock, videoUrl, downloadUrl, renderJobId, renderError, renderStartedAt, social } = props;
+  const { ingredients, scriptPanel, scanId, media, hasScript, audioUrl, voiceTakes, copy, mock, videoUrl, downloadUrl, renderJobId, renderError, renderStartedAt, social } = props;
   const router = useRouter();
 
   const [tab, setTab] = useState<TabId>("ingredients");
@@ -293,7 +291,6 @@ export default function ScanWorkspace(props: StudioProps) {
   }, [processingKey]);
 
   const [reveal, setReveal] = useState<RevealChoice>(props.scoreReveal);
-  const [resolution, setResolution] = useState<"480p" | "720p">(props.defaultResolution);
 
   useEffect(() => {
     call<{ voices: typeof voices; selected: string; warning?: string }>("/api/voices")
@@ -324,29 +321,21 @@ export default function ScanWorkspace(props: StudioProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [copyKey]);
 
-  // Poll running jobs: clips every 4 s, the render every 2 s (it also feeds the progress bar).
-  const clipKey = pendingJobs.map((j) => j.id).join(",");
+  // Poll the running render every 2 s (it also feeds the progress bar).
   useEffect(() => {
-    if (!clipKey && !renderJobId) return;
-    const clipIds = clipKey ? clipKey.split(",") : [];
+    if (!renderJobId) return;
     const timer = setInterval(async () => {
       setNow(Date.now());
       try {
-        const results = await Promise.all([
-          ...clipIds.map((id) => call<{ status: string }>(`/api/jobs/${id}`)),
-          ...(renderJobId
-            ? [call<{ status: string; progress?: { stage?: string; percent?: number } | null }>(`/api/jobs/${renderJobId}`)]
-            : []),
-        ]);
-        const render = renderJobId ? results[results.length - 1] : null;
-        if (render && "progress" in render && render.progress) setProgress(render.progress);
-        if (results.some((r) => r.status !== "running")) router.refresh();
+        const r = await call<{ status: string; progress?: { stage?: string; percent?: number } | null }>(`/api/jobs/${renderJobId}`);
+        if (r.progress) setProgress(r.progress);
+        if (r.status !== "running") router.refresh();
       } catch {
         // transient error; keep polling
       }
     }, 2000);
     return () => clearInterval(timer);
-  }, [clipKey, renderJobId, router]);
+  }, [renderJobId, router]);
 
   async function run(name: string, fn: () => Promise<string | void>) {
     setBusy(name);
@@ -363,26 +352,100 @@ export default function ScanWorkspace(props: StudioProps) {
     }
   }
 
-  const photos = media.filter((m) => m.kind === "product_image");
   const clips = media.filter((m) => m.kind === "clip");
   const uploads = clips.filter((c) => c.uploaded);
-  const animated = clips.filter((c) => !c.uploaded);
-  const clipBySource = new Map(clips.map((c) => [c.source_media_id, c]));
-  const pendingSources = new Set(pendingJobs.map((j) => j.media_id));
-  const unanimated = photos.filter((p) => !clipBySource.has(p.id) && !pendingSources.has(p.id));
-  const slots = Math.max(0, maxClips - animated.length - pendingJobs.length);
-  const toAnimate = Math.min(slots, unanimated.length);
-  const cost = mock ? 0 : estimateCostUsd(resolution as Resolution, toAnimate);
 
   const elapsed = renderStartedAt ? Math.max(0, Math.round((now - new Date(renderStartedAt).getTime()) / 1000)) : 0;
   const clock = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`;
   const percent = progress?.percent ?? 0;
 
+
+  // ---- Auto-advance: after 2 minutes without a tap, do the next step for you (switch saved in settings) ----
+  const [auto, setAuto] = useState(props.autoAdvance);
+  const [autoPaused, setAutoPaused] = useState(false); // "Cancel" pauses until you press Resume
+  const [autoLeft, setAutoLeft] = useState<number | null>(null);
+  const lastTouch = useRef(Date.now());
+  const autoBusy = useRef(false);
+  const touch = () => {
+    lastTouch.current = Date.now();
+  };
+  useEffect(() => {
+    const evs = ["pointerdown", "keydown", "scroll", "touchstart", "input"];
+    evs.forEach((e) => window.addEventListener(e, touch, { passive: true }));
+    return () => evs.forEach((e) => window.removeEventListener(e, touch));
+  }, []);
+  function toggleAuto(on: boolean) {
+    setAuto(on);
+    setAutoPaused(false);
+    touch();
+    postJson("/api/auto-advance", { enabled: on }, "PUT").catch((e) => setError(e instanceof Error ? e.message : "Could not save the switch."));
+  }
+
+  const autoNext: AutoStep | null = nextAutoStep({
+    hasScript,
+    hasAudio: audioUrl !== null,
+    hasCopy: copy.length > 0,
+    isPublic,
+    uploadedClips: media.filter((m) => m.kind === "clip" && !m.source_media_id).length,
+    hasVideo: videoUrl !== null,
+    rendering: renderJobId !== null,
+  });
+  const autoActive = auto && !autoPaused && autoNext !== null && busy === null && !error;
+  // Latest values for the timer without restarting it.
+  const doAuto = useRef<(step: AutoStep) => Promise<void>>(async () => {});
+  doAuto.current = async (step) => {
+    autoBusy.current = true;
+    try {
+      selectTab(step === "script" ? "script" : step);
+      await run(step, async () => {
+        if (step === "script") {
+          let tone = "";
+          try {
+            tone = window.localStorage.getItem("script-tone") ?? "";
+          } catch {
+            // default tone
+          }
+          await postJson(`/api/scans/${scanId}/script`, tone ? { tone } : {});
+        } else if (step === "voice") {
+          await postJson(`/api/scans/${scanId}/voice`, {
+            ...(voiceId ? { voice_id: voiceId, voice_name: voices.find((v) => v.id === voiceId)?.name } : {}),
+            delivery,
+            custom_lines: lines.filter((l) => l.enabled),
+          });
+        } else if (step === "social") {
+          await postJson(`/api/scans/${scanId}/copy`, {});
+        } else if (step === "public") {
+          await postJson(`/api/scans/${scanId}`, { is_public: true }, "PATCH");
+        } else {
+          await postJson(`/api/scans/${scanId}/render`, { reveal });
+        }
+        return "Auto-advance finished a step.";
+      });
+    } finally {
+      lastTouch.current = Date.now(); // the next step waits its own 2 minutes
+      autoBusy.current = false;
+    }
+  };
+  useEffect(() => {
+    if (!autoActive || autoNext === null) {
+      setAutoLeft(null);
+      return;
+    }
+    const timer = setInterval(() => {
+      if (autoBusy.current) return;
+      const left = secondsLeft(Date.now() - lastTouch.current);
+      setAutoLeft(left);
+      if (left === 0) void doAuto.current(autoNext);
+    }, 1000);
+    setAutoLeft(secondsLeft(Date.now() - lastTouch.current));
+    return () => clearInterval(timer);
+  }, [autoActive, autoNext]);
+  // A failure stops auto-advance for this visit (the error shows above); it never retries by itself.
+
   const tabStatus: Record<TabId, "done" | "busy" | null> = {
     ingredients: null,
     script: hasScript ? "done" : null,
     voice: audioUrl ? "done" : null,
-    animation: pendingJobs.length > 0 ? "busy" : clips.length > 0 ? "done" : null,
     video: renderJobId !== null ? "busy" : videoUrl ? "done" : null,
     social: copy.length > 0 ? "done" : null,
     public: isPublic ? "done" : null,
@@ -398,6 +461,32 @@ export default function ScanWorkspace(props: StudioProps) {
       )}
       {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       {notice && <p className="rounded-xl bg-green-50 p-3 text-sm text-green-800">{notice}</p>}
+      {(auto || autoNext !== null) && (
+        <div className="flex items-center gap-3 rounded-xl bg-white p-3 text-sm">
+          <label className="flex flex-1 items-center gap-2">
+            <input type="checkbox" checked={auto} onChange={(e) => toggleAuto(e.target.checked)} className="h-4 w-4" />
+            <span className="font-medium">Auto-advance steps</span>
+          </label>
+          {auto && autoNext !== null && (
+            autoPaused ? (
+              <button className="rounded-lg bg-neutral-100 px-3 py-1.5 text-xs" onClick={() => { setAutoPaused(false); touch(); }}>
+                Resume
+              </button>
+            ) : autoActive && autoLeft !== null ? (
+              <>
+                <span className="text-xs tabular-nums text-neutral-500">
+                  Will {AUTO_LABEL[autoNext]} in {Math.floor(autoLeft / 60)}:{String(autoLeft % 60).padStart(2, "0")}
+                </span>
+                <button className="rounded-lg bg-neutral-100 px-3 py-1.5 text-xs" onClick={() => setAutoPaused(true)}>
+                  Pause
+                </button>
+              </>
+            ) : busy !== null ? (
+              <span className="text-xs text-neutral-500">Working…</span>
+            ) : null
+          )}
+        </div>
+      )}
 
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:gap-8">
       <nav aria-label="Scan steps" className="md:sticky md:top-6 md:w-52 md:shrink-0">
@@ -707,87 +796,20 @@ export default function ScanWorkspace(props: StudioProps) {
 
       {audioUrl && (
         <div className="flex justify-end">
-          <button className="rounded-xl bg-neutral-100 px-3 py-1.5 text-sm" onClick={() => selectTab("animation", true)}>
-            Next: Animation →
+          <button className="rounded-xl bg-neutral-100 px-3 py-1.5 text-sm" onClick={() => selectTab("social", true)}>
+            Next: Social Copy →
           </button>
         </div>
       )}
       </div>
-      <div role="tabpanel" id="panel-animation" aria-labelledby="tab-animation" hidden={tab !== "animation"} className="space-y-4 pt-4">
+      <div role="tabpanel" id="panel-video" aria-labelledby="tab-video" hidden={tab !== "video"} className="space-y-4 pt-4">
       <section className={card}>
-        <h3 className="font-medium">Animate your photos (Wan 2.5)</h3>
-        {photos.length === 0 ? (
-          <p className="text-sm text-neutral-500">No product photos on this scan. Upload your own product video below instead.</p>
-        ) : (
-          <>
-            <div className="grid grid-cols-3 gap-2 md:grid-cols-5">
-              {photos.map((p) => {
-                const clip = clipBySource.get(p.id);
-                const pending = pendingSources.has(p.id);
-                const label = clip ? (clip.is_video ? "Animated" : "Mock clip") : pending ? "Animating…" : "Photo (slow zoom)";
-                return (
-                  <figure key={p.id} className="space-y-1">
-                    <div className="aspect-[9/16] overflow-hidden rounded-xl bg-neutral-100">
-                      {clip?.is_video ? (
-                        <video src={clip.url} controls muted loop playsInline className="h-full w-full object-cover" />
-                      ) : (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={p.url} alt="Product" className="h-full w-full object-cover" />
-                      )}
-                    </div>
-                    <figcaption className="text-center text-xs text-neutral-500">{label}</figcaption>
-                  </figure>
-                );
-              })}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <select
-                value={resolution}
-                onChange={(e) => setResolution(e.target.value as "480p" | "720p")}
-                disabled={busy !== null}
-                className="rounded-xl bg-neutral-100 px-2 py-2 text-sm"
-              >
-                <option value="480p">480p draft (${PRICE_PER_SECOND["480p"].toFixed(2)}/s)</option>
-                <option value="720p">720p final (${PRICE_PER_SECOND["720p"].toFixed(2)}/s)</option>
-              </select>
-              <button
-                className={btn}
-                disabled={busy !== null || toAnimate === 0}
-                onClick={() =>
-                  run("footage", async () => {
-                    const r = await postJson<{ jobs: unknown[]; estimated_cost_usd: number }>(
-                      `/api/scans/${scanId}/footage`,
-                      { resolution },
-                    );
-                    return `Started ${r.jobs.length} clip${r.jobs.length === 1 ? "" : "s"}${
-                      mock ? " (mock)" : ` (about $${r.estimated_cost_usd.toFixed(2)})`
-                    }. They usually take a couple of minutes.`;
-                  })
-                }
-              >
-                {busy === "footage"
-                  ? "Starting…"
-                  : toAnimate === 0
-                    ? "Nothing to animate"
-                    : `Animate ${toAnimate} photo${toAnimate === 1 ? "" : "s"}${mock ? "" : ` · ~$${cost.toFixed(2)}`}`}
-              </button>
-            </div>
-            <p className="text-xs text-neutral-500">
-              {CLIP_SECONDS}-second clips, up to {maxClips} per scan. Photos you don&apos;t animate get a slow zoom, unless you upload your own video, which replaces them.
-              {pendingJobs.length > 0 && ` ${pendingJobs.length} rendering now; this page updates itself.`}
-            </p>
-          </>
-        )}
-      </section>
-
-      <section className={card}>
-        <h3 className="font-medium">Or upload your own product video</h3>
+        <h3 className="font-medium">Your video clips</h3>
         <p className="text-sm text-neutral-500">
           Real footage of the product (MP4, MOV or WebM, up to {MAX_UPLOAD_BYTES / 1024 / 1024} MB each). Your videos are joined whole, in the
-          order shown (use the arrows to change it), under the voiceover. Nothing is trimmed, and photos and AI clips aren&apos;t used. If your
+          order shown (use the arrows to change it), under the voiceover. Nothing is trimmed, and your photos aren&apos;t used. If your
           footage is shorter than the voiceover it&apos;s slowed down (down to half speed), then repeated if needed. If it&apos;s longer, the video simply runs past the
-          voice. The videos&apos; own sound is replaced by the voiceover. No AI credits are used.
+          voice. The videos&apos; own sound is replaced by the voiceover.
         </p>
         <label className={`inline-block cursor-pointer rounded-xl bg-neutral-100 px-4 py-2 text-sm font-medium ${uploadPct !== null || uploads.length >= MAX_UPLOADS ? "pointer-events-none opacity-40" : ""}`}>
           {uploadPct !== null ? `Uploading… ${uploadPct}%` : "Choose video"}
@@ -854,20 +876,10 @@ export default function ScanWorkspace(props: StudioProps) {
         )}
       </section>
 
-      {clips.length > 0 && (
-        <div className="flex justify-end">
-          <button className="rounded-xl bg-neutral-100 px-3 py-1.5 text-sm" onClick={() => selectTab("video", true)}>
-            Next: Final Video →
-          </button>
-        </div>
-      )}
-      </div>
-      <div role="tabpanel" id="panel-video" aria-labelledby="tab-video" hidden={tab !== "video"} className="space-y-4 pt-4">
       <section className={card}>
         <h3 className="font-medium">Final video (1080×1920, 9:16)</h3>
         <p className="text-sm text-neutral-500">
-          Puts your clips (or photos with a slow zoom), the voiceover and captions together. No AI video credits are
-          used.
+          Puts your clips (or your photos with a slow zoom), the voiceover and captions together.
           {clips.length === 0 && !renderJobId && " No clips or videos yet, so your photos will be used."}
         </p>
 
@@ -939,8 +951,7 @@ export default function ScanWorkspace(props: StudioProps) {
               </a>
             )}
             <p className="text-xs text-neutral-500">
-              Not happy? Change the script, voice or clips in their tabs and generate again. Source clips are{" "}
-              {props.defaultResolution}-quality video scaled up to 1080×1920.
+              Not happy? Change the script, voice or clips in their tabs and generate again.
             </p>
           </div>
         )}
@@ -949,8 +960,8 @@ export default function ScanWorkspace(props: StudioProps) {
 
       {videoUrl && (
         <div className="flex justify-end">
-          <button className="rounded-xl bg-neutral-100 px-3 py-1.5 text-sm" onClick={() => selectTab("social", true)}>
-            Next: Social Copy →
+          <button className="rounded-xl bg-neutral-100 px-3 py-1.5 text-sm" onClick={() => selectTab("post", true)}>
+            Next: Connect & Post →
           </button>
         </div>
       )}
@@ -1133,8 +1144,8 @@ export default function ScanWorkspace(props: StudioProps) {
 
       {(
         <div className="flex justify-end">
-          <button className="rounded-xl bg-neutral-100 px-3 py-1.5 text-sm" onClick={() => selectTab("post", true)}>
-            Next: Connect &amp; Post →
+          <button className="rounded-xl bg-neutral-100 px-3 py-1.5 text-sm" onClick={() => selectTab("video", true)}>
+            Next: Final Video →
           </button>
         </div>
       )}

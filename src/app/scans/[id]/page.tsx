@@ -11,7 +11,7 @@ import ScriptSection from "@/components/ScriptSection";
 import { isMock } from "@/lib/mock";
 import { mediaUrl, mediaUrls, type MediaBucket } from "@/lib/storage";
 import { isRenderStale } from "@/lib/render";
-import type { CopyRow, JobRow, MediaRow, VoiceoverRow } from "@/lib/db-types";
+import type { CopyRow, MediaRow, VoiceoverRow } from "@/lib/db-types";
 import NavBar from "@/components/NavBar";
 import { parseReveal } from "@/lib/reveal";
 import ScanWorkspace, { type StudioCopy, type StudioPost, type StudioMedia, type VoiceTake } from "@/components/ScanWorkspace";
@@ -115,19 +115,13 @@ export default async function ScanPage({ params }: { params: Promise<{ id: strin
     .from("social_copy")
     .select("platform, title, description, hashtags")
     .eq("scan_id", id);
-  const { data: settingsData } = await db.from("settings").select("score_reveal").eq("id", 1).maybeSingle();
+  const { data: settingsData } = await db.from("settings").select("score_reveal, auto_advance").eq("id", 1).maybeSingle();
   const { data: acctData } = await db.from("social_accounts").select("platform, account_name, expires_at");
   const { data: postData } = await db
     .from("social_posts")
     .select("id, platform, status, permalink, error, privacy, created_at")
     .eq("scan_id", id)
     .order("created_at", { ascending: false });
-  const { data: jobData } = await db
-    .from("jobs")
-    .select("id, input")
-    .eq("scan_id", id)
-    .eq("step", "i2v")
-    .eq("status", "running");
 
   // Photos live in the images bucket; clips and the voiceover in the videos bucket.
   const bucketFor = (kind: string): MediaBucket => (kind === "clip" ? "videos" : "images");
@@ -148,10 +142,6 @@ export default async function ScanPage({ params }: { params: Promise<{ id: strin
     title: c.title ?? "",
     description: c.description ?? "",
     hashtags: c.hashtags ?? [],
-  }));
-  const pendingJobs = ((jobData ?? []) as Pick<JobRow, "id" | "input">[]).map((j) => ({
-    id: j.id,
-    media_id: j.input?.media_id ?? null,
   }));
   const { data: renderJobs } = await db
     .from("jobs")
@@ -199,7 +189,6 @@ export default async function ScanPage({ params }: { params: Promise<{ id: strin
       })),
     )
   ).reverse(); // newest first on screen
-  const defaultResolution = process.env.WAN_RESOLUTION === "720p" ? "720p" : "480p";
 
   const overall: number = scan.overall_score;
   const overallBand = bandFor(overall);
@@ -316,11 +305,9 @@ export default async function ScanPage({ params }: { params: Promise<{ id: strin
           })),
           posts: ((postData ?? []) as StudioPost[]),
         }}
-        pendingJobs={pendingJobs}
-        maxClips={Number(process.env.MAX_CLIPS ?? 4)}
-        defaultResolution={defaultResolution}
         mock={isMock()}
         scoreReveal={parseReveal(settingsData?.score_reveal)}
+        autoAdvance={settingsData?.auto_advance === true}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">

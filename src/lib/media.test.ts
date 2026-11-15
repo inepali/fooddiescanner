@@ -2,7 +2,6 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { wordsFromAlignment } from "./captions.ts";
 import { isMock, mockAlignment, silentWav, speechSeconds } from "./mock.ts";
-import { estimateCostUsd } from "./pricing.ts";
 import { mergeHashtags, normalizeHashtags, parseCopy, AI_NOTE, CTA, OFF_CREDIT } from "./copy.ts";
 import { narration, parseScript } from "./script.ts";
 
@@ -62,13 +61,6 @@ test("isMock reads MOCK_AI", () => {
   assert.equal(isMock(), false);
   if (before === undefined) delete process.env.MOCK_AI;
   else process.env.MOCK_AI = before;
-});
-
-test("estimateCostUsd matches Wan 2.5 pricing", () => {
-  assert.equal(estimateCostUsd("480p", 4), 1);
-  assert.equal(estimateCostUsd("720p", 4), 2);
-  assert.equal(estimateCostUsd("1080p", 1), 0.75);
-  assert.equal(estimateCostUsd("480p", 0), 0);
 });
 
 test("normalizeHashtags cleans and dedupes", () => {
@@ -251,4 +243,22 @@ test("prompt: a very long label is gated (summarised, reasons trimmed, no delibe
   const short = buildPrompt({ productName: "Oats", overall: 50, allergens: [], ingredients: many.slice(0, 8) });
   assert.doesNotMatch(short, /LONG LABEL/);
   assert.match(buildPrompt({ productName: "Oats", overall: 50, allergens: [], ingredients: many.slice(0, 8) }, true), /LONG LABEL/);
+});
+
+import { nextAutoStep, secondsLeft, IDLE_SECONDS } from "./auto-advance.ts";
+
+test("auto-advance: steps in order, video only with uploaded clips, never posts", () => {
+  const st = { hasScript: false, hasAudio: false, hasCopy: false, isPublic: false, uploadedClips: 0, hasVideo: false, rendering: false };
+  assert.equal(nextAutoStep(st), "script");
+  assert.equal(nextAutoStep({ ...st, hasScript: true }), "voice");
+  assert.equal(nextAutoStep({ ...st, hasScript: true, hasAudio: true }), "social");
+  assert.equal(nextAutoStep({ ...st, hasScript: true, hasAudio: true, hasCopy: true }), "public");
+  const ready = { ...st, hasScript: true, hasAudio: true, hasCopy: true, isPublic: true };
+  assert.equal(nextAutoStep(ready), null); // no clips: wait for your upload
+  assert.equal(nextAutoStep({ ...ready, uploadedClips: 2 }), "video");
+  assert.equal(nextAutoStep({ ...ready, uploadedClips: 2, rendering: true }), null);
+  assert.equal(nextAutoStep({ ...ready, uploadedClips: 2, hasVideo: true }), null); // posting stays manual
+  assert.equal(secondsLeft(0), IDLE_SECONDS);
+  assert.equal(secondsLeft(61_500), 59);
+  assert.equal(secondsLeft(500_000), 0);
 });

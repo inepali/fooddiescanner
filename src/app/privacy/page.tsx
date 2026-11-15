@@ -34,7 +34,7 @@ export default function Privacy() {
       <ul>
         <li>Supabase (database) and Cloudflare R2 (file storage), where scans, images and videos are kept.</li>
         <li>An AI language model provider (Google Gemini or Anthropic Claude) that reads ingredient text and writes scripts and captions.</li>
-        <li>ElevenLabs (voiceover) and fal (video clips), which receive the script text or product photos.</li>
+        <li>ElevenLabs (voiceover), which receives the script text.</li>
         <li>Open Food Facts, which receives a barcode or product name to look up product information.</li>
         <li>Vercel, which hosts the app.</li>
       </ul>
