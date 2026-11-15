@@ -2,7 +2,7 @@
   "name": "Foodie Scanner",
   "short_name": "Foodie Scanner",
   "description": "Label photo in, health report and 60s social video out.",
-  "start_url": "/",
+  "start_url": "/scan",
   "display": "standalone",
   "background_color": "#f2f2f7",
   "theme_color": "#f2f2f7",

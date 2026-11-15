@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { bandFor, type Band } from "@/lib/scoring";
 import type { OffSummary } from "@/lib/openfoodfacts";
+import Link from "next/link";
 import ScoreRing from "@/components/ScoreRing";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +45,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return {
     title: `${name}: ${data.scan.overall_score}/100 ingredient score`,
     description: `Ingredient-by-ingredient health breakdown for ${name}.`,
-    robots: { index: false, follow: false },
+    alternates: { canonical: `/p/${data.scan.id}` },
+    openGraph: { title: `${name}: ${data.scan.overall_score}/100`, description: `Ingredient-by-ingredient health breakdown for ${name}.`, type: "article" },
   };
 }
 
@@ -58,11 +60,14 @@ export default async function PublicScanPage({ params }: { params: Promise<{ id:
   const off = (scan.off_data ?? null) as OffSummary | null;
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-2xl space-y-8 px-5 pb-24 pt-4 sm:px-8">
+      <Link href="/search" className="inline-flex min-h-11 items-center text-[15px] font-semibold text-[#1E6B45]">
+        ← Back to the library
+      </Link>
       <header className="flex items-center gap-6">
         <ScoreRing score={score} />
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold">{scan.product_name ?? "Scanned product"}</h1>
+          <h1 className="font-display text-3xl font-extrabold tracking-tight">{scan.product_name ?? "Scanned product"}</h1>
           <p className="text-neutral-600">
             Overall: <strong>{LABEL[band]}</strong> ({score}/100)
           </p>
@@ -108,7 +113,7 @@ export default async function PublicScanPage({ params }: { params: Promise<{ id:
         </ol>
       </section>
 
-      <footer className="space-y-1 text-xs text-neutral-400">
+      <footer className="space-y-1 text-xs text-neutral-500">
         <p>AI-assisted analysis using a general nutrition rubric. Not medical advice.</p>
         {off && (
           <p>

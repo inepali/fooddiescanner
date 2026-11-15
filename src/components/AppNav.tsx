@@ -24,14 +24,14 @@ export default function AppNav({ scanId }: { scanId?: string }) {
     }
   }, [scanId]);
 
-  const onNew = path === "/" || path.startsWith("/new");
+  const onNew = path === "/scan" || path.startsWith("/new");
   const onHistory = path.startsWith("/history");
   const cls = (active: boolean) =>
     `${link} ${active ? "bg-accent font-medium text-white" : "text-neutral-600 hover:text-neutral-900 md:hover:bg-neutral-100"}`;
 
   return (
     <div className={`mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm md:mb-3 md:flex-col md:items-stretch md:gap-0.5 ${scanId ? "md:border-b md:pb-3" : ""}`}>
-      <Link href="/" className={cls(onNew)} aria-current={onNew ? "page" : undefined}>
+      <Link href="/scan" className={cls(onNew)} aria-current={onNew ? "page" : undefined}>
         + New scan
       </Link>
       <Link href="/history" className={cls(onHistory)} aria-current={onHistory ? "page" : undefined}>
