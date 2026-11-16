@@ -37,6 +37,11 @@ export default function AppNav({ scanId }: { scanId?: string }) {
       <Link href="/history" className={cls(onHistory)} aria-current={onHistory ? "page" : undefined}>
         History
       </Link>
+      <form action="/api/auth/logout" method="post" className="md:mt-1">
+        <button type="submit" className={`${link} text-neutral-500 hover:text-neutral-900 md:w-full md:text-left md:hover:bg-neutral-100`}>
+          Sign out
+        </button>
+      </form>
       {!scanId && last && (
         <Link href={`/scans/${last}`} className="rounded-lg border px-3 py-1.5 text-center text-neutral-700 hover:bg-neutral-100 md:mt-2">
           ← Back to scan
