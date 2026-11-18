@@ -3,7 +3,7 @@
 // Token: "<expiresAtMs>.<hex HMAC-SHA256(secret, 'fooddie-session:' + expiresAtMs)>".
 // The secret is SESSION_SECRET (or APP_PASSWORD on older setups); changing it signs everyone out.
 //
-// Admin sign-in: with ADMIN_EMAILS set, you sign in on /login with that Supabase Auth email and
+// Admin sign-in: with ADMIN_EMAILS set, you sign in on /admin with that Supabase Auth email and
 // password. Without it, the old single APP_PASSWORD still works.
 
 /** Key that signs admin session cookies. Unset = the scanner is open (local dev). */
@@ -61,6 +61,6 @@ export async function verifySession(secret: string, token: string | undefined, n
 /** Only same-site paths ("/scan", "/scans/abc?x=1") are allowed as a post-login destination. */
 export function safeNext(next: string | null | undefined): string {
   if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return "/scan";
-  if (next.startsWith("/login") || next.startsWith("/api/")) return "/scan";
+  if (next.startsWith("/admin") || next.startsWith("/login") || next.startsWith("/api/")) return "/scan";
   return next;
 }

@@ -1,5 +1,5 @@
 // Member (rewards program) helpers that don't touch the network, so they can be unit tested.
-// Members sign in with Supabase email + password. The admin signs in on /login (see session.ts).
+// Members sign in with Supabase email + password. The admin signs in on /admin (see session.ts).
 
 export const MEMBER_ACCESS_COOKIE = "fs_member_at";
 export const MEMBER_REFRESH_COOKIE = "fs_member_rt";

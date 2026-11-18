@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import LoginForm from "@/components/LoginForm";
 import { adminEmails, safeNext } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Sign in" };
+export const metadata: Metadata = { title: "Admin sign in", robots: { index: false } };
 
 type Props = { searchParams: Promise<{ next?: string | string[] }> };
 

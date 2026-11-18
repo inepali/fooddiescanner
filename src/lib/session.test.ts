@@ -35,6 +35,7 @@ test("safeNext keeps same-site paths and blocks the rest", () => {
   assert.equal(safeNext("/\\evil.com"), "/scan");
   assert.equal(safeNext("https://evil.com"), "/scan");
   assert.equal(safeNext("/login"), "/scan");
+  assert.equal(safeNext("/admin"), "/scan");
   assert.equal(safeNext(undefined), "/scan");
 });
 
