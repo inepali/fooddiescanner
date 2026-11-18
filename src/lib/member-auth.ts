@@ -1,6 +1,6 @@
 import { createClient, type Session, type User } from "@supabase/supabase-js";
 import type { NextResponse } from "next/server";
-import { MEMBER_ACCESS_COOKIE, MEMBER_DAYS, MEMBER_REFRESH_COOKIE } from "./members.ts";
+import { MEMBER_ACCESS_COOKIE, MEMBER_DAYS, MEMBER_HINT_COOKIE, MEMBER_REFRESH_COOKIE } from "./members.ts";
 import { supabase } from "./supabase.ts";
 
 // Server-side Supabase Auth for members. Tokens live in httpOnly cookies; the browser never
@@ -18,11 +18,13 @@ export function setMemberCookies(res: NextResponse, session: Session, secure: bo
   const base = { httpOnly: true, secure, sameSite: "lax" as const, path: "/" };
   res.cookies.set(MEMBER_ACCESS_COOKIE, session.access_token, { ...base, maxAge: session.expires_in ?? 3600 });
   res.cookies.set(MEMBER_REFRESH_COOKIE, session.refresh_token, { ...base, maxAge: MEMBER_DAYS * 86_400 });
+  res.cookies.set(MEMBER_HINT_COOKIE, "1", { ...base, httpOnly: false, maxAge: MEMBER_DAYS * 86_400 });
 }
 
 export function clearMemberCookies(res: NextResponse) {
   res.cookies.set(MEMBER_ACCESS_COOKIE, "", { path: "/", maxAge: 0 });
   res.cookies.set(MEMBER_REFRESH_COOKIE, "", { path: "/", maxAge: 0 });
+  res.cookies.set(MEMBER_HINT_COOKIE, "", { path: "/", maxAge: 0 });
 }
 
 export type Member = {
