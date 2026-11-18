@@ -1,5 +1,5 @@
 // Auto-advance: with the switch on, after IDLE_SECONDS without a tap the app does the next step for you.
-// Order: script, voice, social copy, public page, then the final video if you have uploaded clips.
+// Order: script, voice, video (only once you have uploaded clips), social copy, public page.
 // Connect & Post is never automatic.
 
 export const IDLE_SECONDS = 120;
@@ -28,9 +28,9 @@ export type AutoState = {
 export function nextAutoStep(s: AutoState): AutoStep | null {
   if (!s.hasScript) return "script";
   if (!s.hasAudio) return "voice";
+  if (!s.hasVideo && !s.rendering && s.uploadedClips > 0) return "video";
   if (!s.hasCopy) return "social";
   if (!s.isPublic) return "public";
-  if (!s.hasVideo && !s.rendering && s.uploadedClips > 0) return "video";
   return null;
 }
 

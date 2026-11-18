@@ -73,9 +73,9 @@ Posts show "processing" until the platform finishes, then flip to posted. A vide
 
 On the new-scan page (and the phone upload page) use **Scan the barcode instead**: the camera reads the code (Chrome/Edge/Android; iPhone Safari can't yet, so type the digits under the bars), the product and its ingredient list come from Open Food Facts, and **Analyze product** scores that list the same way as a photo. If the product isn't on Open Food Facts or has no ingredient list, photograph the label instead. A label photo, if you add one, takes priority over the barcode list.
 
-## Your own product videos (Final Video tab)
+## Your own product videos (Video tab)
 
-Upload real footage (MP4, MOV, WebM, up to 150 MB, 6 per scan) on the Final Video tab. Videos go straight from your browser to the R2 **videos** bucket, because Vercel can't pass files that large through a function, so the bucket needs a CORS rule. In Cloudflare: R2 → your videos bucket → Settings → CORS policy:
+Upload real footage (MP4, MOV, WebM, up to 150 MB, 6 per scan) on the Video tab. Videos go straight from your browser to the R2 **videos** bucket, because Vercel can't pass files that large through a function, so the bucket needs a CORS rule. In Cloudflare: R2 → your videos bucket → Settings → CORS policy:
 
 ```json
 [
@@ -112,7 +112,7 @@ When the public page is on, its link is inserted right after the "not medical ad
 
 ## Layout
 
-On a scan, the steps (Ingredients, Script, Voice, Social Copy, Public Page, Final Video, Connect & Post) are a left sidebar on desktop, with a number or a green check for each step and a pulsing dot while something is running. On a phone the sidebar becomes a scrolling bar across the top. The current step is kept in the URL (`#voice`), so a reload keeps your place.
+On a scan, the steps (Ingredients, Script, Voice, Video, Social Copy, Public Page, Connect & Post) are a left sidebar on desktop, with a number or a green check for each step and a pulsing dot while something is running. On a phone the sidebar becomes a scrolling bar across the top. The current step is kept in the URL (`#voice`), so a reload keeps your place.
 
 ## Score badges on the video
 
@@ -152,4 +152,4 @@ The AI script names the five best ingredients first, asks viewers to stay, then 
 
 ## Auto-advance steps
 
-Turn on "Auto-advance steps" at the top of a scan (saved in settings, off by default). After 2 minutes without a tap, the app does the next step for you, in order: script, voice, social copy, public page, then the final video if you have uploaded clips. A countdown with a Pause button shows what is next. Each step waits its own 2 minutes, a failure stops it, and Connect & Post is never automatic. It only runs while the page is open. AI animation (fal.ai) was removed; upload your own clips on the Final Video tab.
+Turn on "Auto-advance steps" at the top of a scan (saved in settings, off by default). After 2 minutes without a tap, the app does the next step for you, in order: script, voice, video (once you have uploaded clips; skipped until then), social copy, public page. A countdown with a Pause button shows what is next. Each step waits its own 2 minutes, a failure stops it, and Connect & Post is never automatic. It only runs while the page is open. AI animation (fal.ai) was removed; upload your own clips on the Video tab.

@@ -113,9 +113,9 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "ingredients", label: "Ingredients" },
   { id: "script", label: "Script" },
   { id: "voice", label: "Voice" },
+  { id: "video", label: "Video" },
   { id: "social", label: "Social Copy" },
   { id: "public", label: "Public Page" },
-  { id: "video", label: "Final Video" },
   { id: "post", label: "Connect & Post" },
 ];
 
@@ -796,8 +796,8 @@ export default function ScanWorkspace(props: StudioProps) {
 
       {audioUrl && (
         <div className="flex justify-end">
-          <button className="rounded-xl bg-neutral-100 px-3 py-1.5 text-sm" onClick={() => selectTab("social", true)}>
-            Next: Social Copy →
+          <button className="rounded-xl bg-neutral-100 px-3 py-1.5 text-sm" onClick={() => selectTab("video", true)}>
+            Next: Video →
           </button>
         </div>
       )}
@@ -960,8 +960,8 @@ export default function ScanWorkspace(props: StudioProps) {
 
       {videoUrl && (
         <div className="flex justify-end">
-          <button className="rounded-xl bg-neutral-100 px-3 py-1.5 text-sm" onClick={() => selectTab("post", true)}>
-            Next: Connect & Post →
+          <button className="rounded-xl bg-neutral-100 px-3 py-1.5 text-sm" onClick={() => selectTab("social", true)}>
+            Next: Social Copy →
           </button>
         </div>
       )}
@@ -1144,8 +1144,8 @@ export default function ScanWorkspace(props: StudioProps) {
 
       {(
         <div className="flex justify-end">
-          <button className="rounded-xl bg-neutral-100 px-3 py-1.5 text-sm" onClick={() => selectTab("video", true)}>
-            Next: Final Video →
+          <button className="rounded-xl bg-neutral-100 px-3 py-1.5 text-sm" onClick={() => selectTab("post", true)}>
+            Next: Connect & Post →
           </button>
         </div>
       )}
