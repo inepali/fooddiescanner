@@ -157,6 +157,7 @@ export async function runRender(scanId: string, jobId: string, reveal: RevealCho
     await report("Rendering video", 10, true);
     const outFile = join(dir, "final.mp4");
     let progressError: unknown = null;
+    const stop = new AbortController();
     await runFfmpeg(
       buildFfmpegArgs({
         segments,
@@ -176,9 +177,14 @@ export async function runRender(scanId: string, jobId: string, reveal: RevealCho
       (seconds) => {
         report("Rendering video", 10 + 80 * Math.min(1, seconds / outTotal)).catch((e) => {
           progressError = e;
+          // Cancelled: kill ffmpeg now instead of letting it finish a video nobody wants.
+          if (e instanceof Cancelled) stop.abort();
         });
       },
-    );
+      stop.signal,
+    ).catch((e) => {
+      throw progressError instanceof Cancelled ? progressError : e;
+    });
     if (progressError instanceof Cancelled) throw progressError;
 
     await report("Uploading", 92, true);

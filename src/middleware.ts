@@ -40,4 +40,7 @@ export async function middleware(req: NextRequest) {
   return NextResponse.redirect(login);
 }
 
-export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"] };
+// Skip static files (icons, images, manifest) so they don't run the middleware function.
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|webmanifest|txt|woff2?)$).*)"],
+};

@@ -37,7 +37,10 @@ export default function MediaUploader({
 
   useEffect(() => {
     refresh();
-    const timer = setInterval(refresh, 3000);
+    // Skip polls while the tab is hidden; each one is a function call with signed URLs.
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, 3000);
     return () => clearInterval(timer);
   }, [refresh]);
 

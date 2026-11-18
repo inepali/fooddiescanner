@@ -38,7 +38,9 @@ export default function BarcodeEntry({ scanId, onFound }: { scanId: string; onFo
         })
         .catch(() => {});
     void check();
-    const timer = setInterval(check, 5000);
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") check();
+    }, 5000);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanId]);
