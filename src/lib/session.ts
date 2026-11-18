@@ -1,7 +1,28 @@
 // Signed session cookie for the private scanner (replaces the browser's Basic-auth popup).
 // Pure Web Crypto, so it runs in middleware (edge) and in route handlers alike.
-// Token: "<expiresAtMs>.<hex HMAC-SHA256(APP_PASSWORD, 'fooddie-session:' + expiresAtMs)>".
-// Changing APP_PASSWORD signs everyone out.
+// Token: "<expiresAtMs>.<hex HMAC-SHA256(secret, 'fooddie-session:' + expiresAtMs)>".
+// The secret is SESSION_SECRET (or APP_PASSWORD on older setups); changing it signs everyone out.
+//
+// Admin sign-in: with ADMIN_EMAILS set, you sign in on /login with that Supabase Auth email and
+// password. Without it, the old single APP_PASSWORD still works.
+
+/** Key that signs admin session cookies. Unset = the scanner is open (local dev). */
+export function sessionSecret(env: Record<string, string | undefined> = process.env): string | undefined {
+  return env.SESSION_SECRET || env.APP_PASSWORD || undefined;
+}
+
+/** Lowercased admin emails from ADMIN_EMAILS (comma or space separated). */
+export function adminEmails(env: Record<string, string | undefined> = process.env): string[] {
+  return (env.ADMIN_EMAILS ?? "")
+    .split(/[\s,]+/)
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/** True when the admin scanner is locked (needed before social accounts can be connected). */
+export function adminGuarded(env: Record<string, string | undefined> = process.env): boolean {
+  return Boolean(sessionSecret(env));
+}
 
 export const SESSION_COOKIE = "fs_session";
 export const SESSION_DAYS = 30;
