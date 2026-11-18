@@ -1,5 +1,6 @@
 import { Bricolage_Grotesque, Inter } from "next/font/google";
 import Link from "next/link";
+import MemberButton from "@/components/site/MemberButton";
 
 const display = Bricolage_Grotesque({ subsets: ["latin"], weight: ["600", "700", "800"], variable: "--font-display" });
 const body = Inter({ subsets: ["latin"], variable: "--font-body" });
@@ -26,11 +27,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           <Link href="/#ingredients" className="text-[#14201A] hover:text-[#1E6B45]">Ingredients</Link>
           <Link href="/#faq" className="text-[#14201A] hover:text-[#1E6B45]">FAQ</Link>
         </nav>
-        {/* No cookie check here, so public pages stay static; /signin forwards members who are already signed in to /me. */}
-        <Link href="/signin" className="flex min-h-11 shrink-0 items-center rounded-full bg-[#14201A] px-5 text-[15px] font-semibold text-white hover:bg-[#2A3A31]">
-          <span className="sm:hidden">Log in</span>
-          <span className="hidden sm:inline">Contributor login</span>
-        </Link>
+        <MemberButton />
       </header>
 
       <div id="content">{children}</div>

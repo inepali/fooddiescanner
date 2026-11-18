@@ -3,6 +3,8 @@
 
 export const MEMBER_ACCESS_COOKIE = "fs_member_at";
 export const MEMBER_REFRESH_COOKIE = "fs_member_rt";
+/** Readable by the page (not httpOnly) and holds no secret: it only tells the static header to show "Log out". */
+export const MEMBER_HINT_COOKIE = "fs_member";
 export const MEMBER_DAYS = 30;
 export const MIN_PASSWORD = 8;
 
