@@ -37,3 +37,12 @@ test("safeNext keeps same-site paths and blocks the rest", () => {
   assert.equal(safeNext("/login"), "/scan");
   assert.equal(safeNext(undefined), "/scan");
 });
+
+test("admin emails and secret come from env", async () => {
+  const { adminEmails, adminGuarded, sessionSecret } = await import("./session.ts");
+  assert.deepEqual(adminEmails({ ADMIN_EMAILS: " A@x.com, b@y.com  c@z.com" }), ["a@x.com", "b@y.com", "c@z.com"]);
+  assert.deepEqual(adminEmails({}), []);
+  assert.equal(sessionSecret({ SESSION_SECRET: "s", APP_PASSWORD: "p" }), "s");
+  assert.equal(sessionSecret({ APP_PASSWORD: "p" }), "p");
+  assert.equal(adminGuarded({}), false);
+});

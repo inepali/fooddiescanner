@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, safeEqual, verifySession } from "@/lib/session";
+import { SESSION_COOKIE, safeEqual, sessionSecret, verifySession } from "@/lib/session";
 
 // Optional password for the private scanner. Required before you can connect Instagram / TikTok.
 // Set APP_PASSWORD. Unset = open, as before. Signing in happens on /login (a session cookie),
 // not in the browser's password popup.
 export async function middleware(req: NextRequest) {
-  const pass = process.env.APP_PASSWORD;
-  if (!pass) return NextResponse.next();
+  const secret = sessionSecret();
+  if (!secret) return NextResponse.next();
   const path = req.nextUrl.pathname;
 
   // The public library: home, search and report pages (/p/<id>). They only ever show scans you turned public.
@@ -22,11 +22,12 @@ export async function middleware(req: NextRequest) {
   if (/^\/(manifest\.webmanifest|icon-\d+\.png|apple-touch-icon\.png)$/.test(path)) return NextResponse.next();
   if (path === "/terms" || path === "/privacy") return NextResponse.next();
 
-  if (await verifySession(pass, req.cookies.get(SESSION_COOKIE)?.value)) return NextResponse.next();
+  if (await verifySession(secret, req.cookies.get(SESSION_COOKIE)?.value)) return NextResponse.next();
 
-  // Scripts can still send the password with HTTP Basic auth (any username); browsers never get the popup.
+  // Scripts can still send APP_PASSWORD with HTTP Basic auth (any username); browsers never get the popup.
+  const pass = process.env.APP_PASSWORD;
   const header = req.headers.get("authorization") ?? "";
-  if (header.startsWith("Basic ")) {
+  if (pass && header.startsWith("Basic ")) {
     try {
       const decoded = atob(header.slice(6));
       if (safeEqual(decoded.slice(decoded.indexOf(":") + 1), pass)) return NextResponse.next();

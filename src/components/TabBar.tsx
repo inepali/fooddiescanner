@@ -5,11 +5,12 @@ import { usePathname } from "next/navigation";
 
 const icon = "h-7 w-7";
 
-/** Phone-only bottom tab bar for the top-level screens (like iOS): Scan and History. */
+/** Phone-only bottom tab bar for the top-level screens (like iOS): Scan, History and Review. */
 export default function TabBar() {
   const path = usePathname() ?? "";
   const onHistory = path.startsWith("/history");
   const onScan = path === "/scan" || path.startsWith("/new");
+  const onReview = path.startsWith("/review");
   const item = (active: boolean) =>
     `flex flex-1 flex-col items-center gap-0.5 pt-1.5 text-[10px] font-medium ${active ? "text-accent" : "text-neutral-500"}`;
   return (
@@ -30,6 +31,13 @@ export default function TabBar() {
           <path d="M12 7.5V12l3 2" />
         </svg>
         History
+      </Link>
+      <Link href="/review" className={item(onReview)} aria-current={onReview ? "page" : undefined}>
+        <svg viewBox="0 0 24 24" className={icon} fill="none" stroke="currentColor" strokeWidth={onReview ? 2.2 : 1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <rect x="4" y="4" width="16" height="16" rx="3" />
+          <path d="m8.5 12 2.5 2.5 4.5-5" />
+        </svg>
+        Review
       </Link>
     </nav>
   );

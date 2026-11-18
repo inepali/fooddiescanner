@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { newInviteCode } from "@/lib/members";
 import { supabase } from "@/lib/supabase";
 
-// Admin only: /api/* sits behind APP_PASSWORD in middleware (it is not in the public list).
+// Admin only: /api/* sits behind the admin login in middleware (it is not in the public list).
 
 /** GET → your invite codes, newest first. */
 export async function GET() {

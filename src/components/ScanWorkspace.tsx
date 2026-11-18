@@ -1155,7 +1155,7 @@ export default function ScanWorkspace(props: StudioProps) {
         <h3 className="font-medium">Connect and post</h3>
         {!social.guarded && (
           <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
-            Set an <code>APP_PASSWORD</code> environment variable first. Connected accounts can post as you, so this app needs a password before it allows connecting.
+            Set <code>SESSION_SECRET</code> and <code>ADMIN_EMAILS</code> (or <code>APP_PASSWORD</code>) first. Connected accounts can post as you, so this app needs a password before it allows connecting.
           </p>
         )}
         {(["instagram", "tiktok", "youtube"] as const).map((platform) => {

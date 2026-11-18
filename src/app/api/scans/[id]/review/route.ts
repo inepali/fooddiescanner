@@ -1,7 +1,7 @@
 import { HttpError, handler, json, paramId } from "@/lib/http";
 import { supabase } from "@/lib/supabase";
 
-// Admin only (behind APP_PASSWORD): review a member's submission.
+// Admin only (behind the admin login): review a member's submission.
 // { status: "approved" | "rejected", public?: boolean }. Rejecting takes the scan's points back (0017).
 export const POST = handler(async (req, ctx) => {
   const id = await paramId(ctx);

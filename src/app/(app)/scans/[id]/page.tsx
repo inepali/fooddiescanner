@@ -1,3 +1,4 @@
+import { adminGuarded } from "@/lib/session";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -296,7 +297,7 @@ export default async function ScanPage({ params }: { params: Promise<{ id: strin
         renderProgress={(activeRender?.output as { stage?: string; percent?: number } | null | undefined) ?? null}
         copy={studioCopy}
         social={{
-          guarded: Boolean(process.env.APP_PASSWORD),
+          guarded: adminGuarded(),
           isPublic: Boolean(scan.is_public),
           accounts: ((acctData ?? []) as { platform: "tiktok" | "instagram" | "youtube"; account_name: string | null; expires_at: string | null }[]).map((a) => ({
             platform: a.platform,
