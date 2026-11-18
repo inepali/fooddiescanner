@@ -25,6 +25,9 @@ export default async function SignInPage({ searchParams }: Props) {
           </p>
         )}
         <SignInForm next={next} />
+        <p className="-mt-2 text-right text-sm">
+          <Link href="/forgot" className="font-semibold text-[#1E6B45]">Forgot password?</Link>
+        </p>
         <p className="text-center text-sm">
           New here? <Link href="/join" className="font-semibold text-[#1E6B45]">Join</Link>
         </p>
