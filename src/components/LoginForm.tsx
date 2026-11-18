@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 
-/** Password form for the private scanner. On success the session cookie is set and we go to `next`. */
-export default function LoginForm({ next }: { next: string }) {
+/** Admin sign-in for the private scanner (email + password, or the old single password). On success we go to `next`. */
+export default function LoginForm({ next, withEmail = false }: { next: string; withEmail?: boolean }) {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -11,14 +12,14 @@ export default function LoginForm({ next }: { next: string }) {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!password || busy) return;
+    if (!password || (withEmail && !email) || busy) return;
     setBusy(true);
     setError(null);
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password, next }),
+        body: JSON.stringify({ email, password, next }),
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; next?: string; error?: string };
       if (!res.ok || !data.ok) {
@@ -36,6 +37,24 @@ export default function LoginForm({ next }: { next: string }) {
 
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
+      {withEmail && (
+        <div className="space-y-1.5">
+          <label htmlFor="email" className="block text-sm font-medium text-neutral-700">
+            Email
+          </label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="username"
+            autoFocus
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="h-12 w-full rounded-xl border bg-[#f2f2f7] px-4 text-base focus:border-accent focus:bg-white focus:outline-none"
+          />
+        </div>
+      )}
       <div className="space-y-1.5">
         <label htmlFor="password" className="block text-sm font-medium text-neutral-700">
           Password
@@ -46,7 +65,7 @@ export default function LoginForm({ next }: { next: string }) {
             name="password"
             type={show ? "text" : "password"}
             autoComplete="current-password"
-            autoFocus
+            autoFocus={!withEmail}
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -71,7 +90,7 @@ export default function LoginForm({ next }: { next: string }) {
       </div>
       <button
         type="submit"
-        disabled={!password || busy}
+        disabled={!password || (withEmail && !email) || busy}
         className="flex h-12 w-full items-center justify-center rounded-xl bg-accent text-base font-semibold text-white disabled:opacity-50"
       >
         {busy ? "Signing in…" : "Sign in"}

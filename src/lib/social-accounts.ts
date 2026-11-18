@@ -2,6 +2,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { supabase } from "./supabase";
 import { decrypt, encrypt } from "./crypto";
 import { HttpError } from "./http";
+import { adminGuarded } from "./session";
 import { PLATFORM_LABEL, needsRefresh, refreshTokens, type Platform, type Tokens } from "./social-platforms";
 
 export type AccountRow = {
@@ -19,9 +20,9 @@ export type AccountRow = {
  * and posting need APP_PASSWORD set (middleware then asks for it on every page).
  */
 export function requireGuard() {
-  if (!process.env.APP_PASSWORD) {
+  if (!adminGuarded()) {
     throw new HttpError(
-      "Set APP_PASSWORD first. Connecting accounts lets this app post as you, so the app needs a password before that's allowed.",
+      "Set SESSION_SECRET and ADMIN_EMAILS (or APP_PASSWORD) first. Connecting accounts lets this app post as you, so the app needs a password before that's allowed.",
       403,
     );
   }

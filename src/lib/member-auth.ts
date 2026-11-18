@@ -84,3 +84,12 @@ export function readMemberCookies(req: Request): { access?: string; refresh?: st
 }
 
 export const isSecure = (req: Request) => new URL(req.url).protocol === "https:";
+
+/** The signed-in member for a route handler, renewing an expired token. `fresh` = set new cookies on the response. */
+export async function memberForRequest(req: Request): Promise<{ member: Member | null; fresh: Session | null }> {
+  const c = readMemberCookies(req);
+  const member = await memberFromToken(c.access);
+  if (member) return { member, fresh: null };
+  const renewed = await refreshMember(c.refresh);
+  return { member: renewed?.member ?? null, fresh: renewed?.session ?? null };
+}

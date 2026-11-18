@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-// The private scanner tool (password protected by middleware when APP_PASSWORD is set).
+// The private scanner tool (locked by middleware when SESSION_SECRET or APP_PASSWORD is set).
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
