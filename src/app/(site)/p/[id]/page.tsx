@@ -6,7 +6,14 @@ import type { OffSummary } from "@/lib/openfoodfacts";
 import Link from "next/link";
 import ScoreRing from "@/components/ScoreRing";
 
-export const dynamic = "force-dynamic";
+// Cached and rebuilt at most every 10 minutes, so crawlers and shared links don't re-render it on every visit.
+// Renaming, unpublishing or deleting a scan refreshes it right away (revalidatePath in /api/scans/[id]).
+export const revalidate = 600;
+
+// No pages are built ahead of time; each report is cached the first time someone opens it.
+export function generateStaticParams() {
+  return [];
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

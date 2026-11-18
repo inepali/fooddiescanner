@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { downscale, readJson } from "@/lib/image";
 import { MAX_PRODUCT_IMAGES, type MediaItem } from "@/lib/media";
 import CameraCapture from "./CameraCapture";
+import { usePoll } from "@/lib/use-poll";
 
 // Label + product photo slots for one scan. Used on the desktop page and on the
 // phone page (opened from the QR code); both poll, so photos added on the phone
@@ -36,13 +37,10 @@ export default function MediaUploader({
   }, [scanId]);
 
   useEffect(() => {
-    refresh();
-    // Skip polls while the tab is hidden; each one is a function call with signed URLs.
-    const timer = setInterval(() => {
-      if (document.visibilityState === "visible") void refresh();
-    }, 3000);
-    return () => clearInterval(timer);
+    void refresh();
   }, [refresh]);
+  // Each poll is a function call with signed URLs: skipped while the tab is hidden, paused when nobody is using the page.
+  usePoll(refresh, 3000);
 
   function openCamera(kind: MediaItem["kind"]) {
     if (window.isSecureContext && typeof navigator.mediaDevices?.getUserMedia === "function") setCamera(kind);
