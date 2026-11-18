@@ -172,7 +172,7 @@ export default function MemberScan() {
     <section className="space-y-5 rounded-3xl bg-white p-7 shadow-sm">
       <div className="space-y-1">
         <h1 className="font-display text-3xl font-extrabold tracking-tight">Scan a product</h1>
-        <p className="text-[15px] text-[#3D4C42]">Three things, then we’ll break down every ingredient.</p>
+        <p className="text-[15px] text-[#3D4C42]">Three things, then we’ll break down every ingredient. You can submit one scan every 24 hours.</p>
       </div>
       <ol className="space-y-3">
         {PARTS.map((p, i) => (

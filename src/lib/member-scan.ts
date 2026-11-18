@@ -4,10 +4,26 @@
 export const VIDEO_MIN_S = 45;
 export const VIDEO_MAX_S = 75;
 
-/** Scans a member can start per rolling 24 hours (each one costs an AI label read). */
-export function dailyScanLimit(env: string | undefined = process.env.MEMBER_DAILY_SCANS): number {
+/** Submissions a member can make per rolling 24 hours (each one costs an AI label read). Default 1. */
+export function dailySubmitLimit(env: string | undefined = process.env.MEMBER_DAILY_SUBMISSIONS): number {
   const n = Math.round(Number(env));
-  return Number.isFinite(n) && n > 0 ? Math.min(n, 100) : 5;
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 100) : 1;
+}
+
+/**
+ * When the member may submit again, or null if they may now. `recent` = their submission
+ * times (ms) in the last 24 hours; the oldest one leaving the window frees a slot.
+ */
+export function nextSubmitAt(recent: number[], limit: number, now = Date.now()): number | null {
+  const inWindow = recent.filter((t) => t > now - 86_400_000).sort((a, b) => a - b);
+  if (inWindow.length < limit) return null;
+  return inWindow[inWindow.length - limit] + 86_400_000;
+}
+
+/** "in 3 h", "in 25 min" */
+export function waitText(until: number, now = Date.now()): string {
+  const mins = Math.max(1, Math.ceil((until - now) / 60_000));
+  return mins >= 60 ? `in ${Math.ceil(mins / 60)} h` : `in ${mins} min`;
 }
 
 /** A problem with the video's length, or null if it's fine. */

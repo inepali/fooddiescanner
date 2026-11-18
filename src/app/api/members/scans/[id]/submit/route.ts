@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { analyzeScan } from "@/lib/analyze-scan";
 import { HttpError, json, paramId } from "@/lib/http";
 import { memberHandler, ownScan } from "@/lib/member-routes";
-import { PARTS, missingParts } from "@/lib/member-scan";
+import { PARTS, dailySubmitLimit, missingParts, nextSubmitAt, waitText } from "@/lib/member-scan";
 import { supabase } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -23,6 +23,18 @@ export const POST = memberHandler(async (_req, member, ctx) => {
   }
 
   if (!scan.submitted_at) {
+    const { data: recent } = await db
+      .from("scans")
+      .select("submitted_at")
+      .eq("creator_id", member.id)
+      .neq("id", scan.id)
+      .gte("submitted_at", new Date(Date.now() - 86_400_000).toISOString());
+    const limit = dailySubmitLimit();
+    const until = nextSubmitAt((recent ?? []).map((r) => Date.parse(r.submitted_at as string)), limit);
+    if (until) {
+      const what = limit === 1 ? "one scan" : `${limit} scans`;
+      throw new HttpError(`You can submit ${what} every 24 hours. Your next one opens ${waitText(until)}. Your draft is saved.`, 429);
+    }
     await db.from("scans").update({ submitted_at: new Date().toISOString(), review_status: "pending" }).eq("id", scan.id);
   }
   const res = await analyzeScan(scan.id);

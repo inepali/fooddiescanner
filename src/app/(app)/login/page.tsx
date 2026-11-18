@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import LoginForm from "@/components/LoginForm";
-import { safeNext } from "@/lib/session";
+import { adminEmails, safeNext } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -21,7 +21,7 @@ export default async function LoginPage({ searchParams }: Props) {
           <h1 className="text-2xl font-bold tracking-tight">Fooddie Scanner</h1>
           <p className="text-[15px] text-neutral-500">Sign in to scan labels and make videos.</p>
         </div>
-        <LoginForm next={next} />
+        <LoginForm next={next} withEmail={adminEmails().length > 0} />
         <p className="text-center text-sm">
           <a href="/" className="text-accent">
             ← Back to the public library
