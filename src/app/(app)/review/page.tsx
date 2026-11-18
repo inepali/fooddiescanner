@@ -2,6 +2,7 @@ import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import LargeTitle from "@/components/LargeTitle";
 import ReviewActions from "@/components/ReviewActions";
+import ReviewTabs from "@/components/ReviewTabs";
 import { mediaUrl } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
 
@@ -64,24 +65,11 @@ export default async function ReviewPage({ searchParams }: Props) {
     }),
   );
 
-  const tab = (id: "pending" | "done", label: string) => (
-    <Link
-      href={id === "pending" ? "/review" : "/review?show=done"}
-      aria-current={show === id ? "page" : undefined}
-      className={`rounded-full px-4 py-2 text-sm font-medium ${show === id ? "bg-accent text-white" : "bg-white text-neutral-600"}`}
-    >
-      {label}
-    </Link>
-  );
-
   return (
     <AppShell>
       <div className="space-y-5">
         <LargeTitle title="Review" subtitle={`${pendingCount ?? 0} waiting`} />
-        <div className="flex gap-2">
-          {tab("pending", "Waiting")}
-          {tab("done", "Reviewed")}
-        </div>
+        <ReviewTabs active={show} />
         {rows.length === 0 && <p className="text-neutral-600">{show === "pending" ? "Nothing to review. 🎉" : "Nothing reviewed yet."}</p>}
         {rows.map((r) => {
           const c = who.get(r.creator_id);

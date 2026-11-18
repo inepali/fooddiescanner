@@ -10,7 +10,7 @@ export default function TabBar() {
   const path = usePathname() ?? "";
   const onHistory = path.startsWith("/history");
   const onScan = path === "/scan" || path.startsWith("/new");
-  const onReview = path.startsWith("/review");
+  const onReview = path.startsWith("/review") || path.startsWith("/invites");
   const item = (active: boolean) =>
     `flex flex-1 flex-col items-center gap-0.5 pt-1.5 text-[10px] font-medium ${active ? "text-accent" : "text-neutral-500"}`;
   return (
