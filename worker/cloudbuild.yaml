@@ -1,0 +1,6 @@
+# Builds the render worker image (the Dockerfile lives in worker/, the build context is the repo root).
+#   gcloud builds submit --config worker/cloudbuild.yaml --substitutions=_IMAGE=<image> .
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "-f", "worker/Dockerfile", "-t", "${_IMAGE}", "."]
+images: ["${_IMAGE}"]
