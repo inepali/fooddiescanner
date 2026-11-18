@@ -86,9 +86,11 @@ REGION=us-east1
 IMAGE=$REGION-docker.pkg.dev/$PROJECT/fooddie/render-worker
 
 gcloud config set project $PROJECT
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com storage.googleapis.com
 gcloud artifacts repositories create fooddie --repository-format=docker --location=$REGION
-gcloud builds submit --config worker/cloudbuild.yaml --substitutions=_IMAGE=$IMAGE .
+gcloud storage buckets create gs://$PROJECT-build --location=$REGION    # own staging bucket (once)
+gcloud builds submit --config worker/cloudbuild.yaml --substitutions=_IMAGE=$IMAGE \
+  --gcs-source-staging-dir=gs://$PROJECT-build/source .
 gcloud run deploy fooddie-render --image $IMAGE --region $REGION \
   --cpu 2 --memory 4Gi --concurrency 1 --timeout 600 \
   --min-instances 0 --max-instances 3 --allow-unauthenticated \
