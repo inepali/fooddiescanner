@@ -4,11 +4,12 @@ import { latestVideo } from "@/lib/queries";
 import { ffmpegPath, isRenderStale } from "@/lib/render";
 import type { JobRow } from "@/lib/db-types";
 import { runRender } from "@/lib/render-job";
+import { renderOnWorker, renderWorkerUrl } from "@/lib/render-remote";
 import { DEFAULT_REVEAL, parseReveal } from "@/lib/reveal";
 import { HttpError, handler, json, paramId } from "@/lib/http";
 
 export const runtime = "nodejs";
-// Rendering keeps running after the response (via after()) up to this limit.
+// Rendering (or waiting on the render worker) keeps running after the response (via after()) up to this limit.
 export const maxDuration = 300;
 
 // Starts the final 1080x1920 render. The browser polls /api/jobs/[id].
@@ -26,7 +27,9 @@ export const POST = handler(async (req, ctx) => {
     reveal = parseReveal(st?.score_reveal);
   }
 
-  await ffmpegPath(); // fail now with a clear message instead of inside the background job
+  // With RENDER_WORKER_URL set, ffmpeg runs on the render worker (Cloud Run), not in this function.
+  const worker = renderWorkerUrl();
+  if (!worker) await ffmpegPath(); // fail now with a clear message instead of inside the background job
 
   const video = await latestVideo(db, id);
   if (!video?.script) throw new HttpError("Create the script first.");
@@ -65,6 +68,7 @@ export const POST = handler(async (req, ctx) => {
     .single();
   if (error || !job) throw new Error(`Could not start the render: ${error?.message}`);
 
-  after(() => runRender(id, job.id as string, reveal));
+  const jobId = job.id as string;
+  after(() => (worker ? renderOnWorker(worker, id, jobId, reveal) : runRender(id, jobId, reveal)));
   return json({ job_id: job.id as string });
 });
