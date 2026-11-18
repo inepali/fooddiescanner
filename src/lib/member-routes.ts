@@ -29,6 +29,7 @@ export type OwnScan = {
   product_name: string | null;
   submitted_at: string | null;
   review_status: "pending" | "approved" | "rejected" | null;
+  off_code: string | null;
   kind: SubmissionKind;
 };
 
@@ -36,7 +37,7 @@ export type OwnScan = {
 export async function ownScan(member: Member, id: string): Promise<OwnScan> {
   const { data } = await supabase()
     .from("scans")
-    .select("id, status, overall_score, product_name, submitted_at, review_status, submission_kind")
+    .select("id, status, overall_score, product_name, submitted_at, review_status, off_code, submission_kind")
     .eq("id", id)
     .eq("creator_id", member.id)
     .maybeSingle();

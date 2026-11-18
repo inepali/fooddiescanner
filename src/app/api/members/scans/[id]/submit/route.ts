@@ -56,7 +56,7 @@ async function addVideoAsClip(db: Db, scanId: string) {
 
 /**
  * POST → submits the draft.
- *   scan:  needs the label + product photo; reads the label and scores it. Points land when analyzed.
+ *   scan:  needs the label photo (or a barcode) + product photo; reads it and scores it. Points land when analyzed.
  *   video: { product_name } + product photo + video; waits for the admin's review (no AI read).
  */
 export const POST = memberHandler(async (req, member, ctx) => {
@@ -67,7 +67,7 @@ export const POST = memberHandler(async (req, member, ctx) => {
 
   const db = supabase();
   const { data: media } = await db.from("scan_media").select("kind").eq("scan_id", scan.id);
-  const missing = missingParts((media ?? []).map((m) => m.kind as string), scan.kind);
+  const missing = missingParts((media ?? []).map((m) => m.kind as string), scan.kind, { barcode: Boolean(scan.off_code) });
   if (missing.length) throw new HttpError(`Add your ${missing.map((m) => PART_LABELS[m].toLowerCase()).join(", ")} first.`);
 
   if (scan.kind === "video") {
