@@ -21,10 +21,26 @@ export const GET = memberHandler(async (_req, member, ctx) => {
   );
   const video = rows.find((m) => m.kind === "product_video");
 
-  let ingredients: { name: string; score: number | null; band: string | null; reason: string | null }[] = [];
+  // Same breakdown the admin sees: every ingredient, the overall ring, allergens, Open Food Facts.
+  let result: {
+    ingredients: { id: string; position: number; raw_name: string; score: number; band: string; reason: string | null; provisional: boolean }[];
+    allergens: string[];
+    label_score: number | null;
+    external_score: number | null;
+    off: unknown;
+  } | null = null;
   if (scan.status === "analyzed") {
-    const { data: ings } = await db.from("scan_ingredients").select("raw_name, score, band, reason").eq("scan_id", scan.id).order("position");
-    ingredients = (ings ?? []).map((i) => ({ name: i.raw_name, score: i.score, band: i.band, reason: i.reason }));
+    const [{ data: ings }, { data: extra }] = await Promise.all([
+      db.from("scan_ingredients").select("id, position, raw_name, score, band, reason, provisional").eq("scan_id", scan.id).order("position"),
+      db.from("scans").select("allergens, label_score, external_score, off_data").eq("id", scan.id).maybeSingle(),
+    ]);
+    result = {
+      ingredients: ings ?? [],
+      allergens: (extra?.allergens as string[] | null) ?? [],
+      label_score: extra?.label_score ?? null,
+      external_score: extra?.external_score ?? null,
+      off: extra?.off_data ?? null,
+    };
   }
   return json({
     scan,
@@ -32,7 +48,7 @@ export const GET = memberHandler(async (_req, member, ctx) => {
     video: video ? { duration_s: video.duration_s } : null,
     parts: partsFor(scan.kind),
     missing: missingParts(rows.map((m) => m.kind as string), scan.kind, { barcode: Boolean(scan.off_code) }),
-    ingredients,
+    result,
   });
 });
 

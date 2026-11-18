@@ -1,15 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { BAND_LABEL, IngredientList, OffCrossCheck, type BreakdownIngredient } from "@/components/ScanBreakdown";
+import ScoreRing from "@/components/ScoreRing";
 import MemberBarcode from "@/components/site/MemberBarcode";
 import { downscale, readJson } from "@/lib/image";
 import { videoLengthProblem, type Part, type SubmissionKind } from "@/lib/member-scan";
+import type { OffSummary } from "@/lib/openfoodfacts";
+import { bandFor } from "@/lib/scoring";
 
 // Two separate member flows:
 //   scan:  label photo → product photo → submit → ingredient breakdown
 //   video: product photo → own 60 s video → product name → submit → waits for review
 
-type Ingredient = { name: string; score: number | null; band: string | null; reason: string | null };
 type State = {
   scan: {
     id: string;
@@ -24,16 +27,15 @@ type State = {
   photos: { kind: string; url: string }[];
   video: { duration_s: number | null } | null;
   missing: Part[];
-  ingredients: Ingredient[];
+  result: {
+    ingredients: BreakdownIngredient[];
+    allergens: string[];
+    label_score: number | null;
+    external_score: number | null;
+    off: OffSummary | null;
+  } | null;
 };
 
-const BAND: Record<string, string> = {
-  great: "bg-emerald-600",
-  good: "bg-emerald-500",
-  fair: "bg-amber-400",
-  poor: "bg-orange-500",
-  avoid: "bg-red-600",
-};
 
 const btn = "flex h-12 w-full items-center justify-center rounded-xl text-base font-semibold disabled:opacity-50";
 
@@ -184,36 +186,38 @@ export default function MemberScan({ kind = "scan" }: { kind?: SubmissionKind })
     );
   }
 
-  if (state.scan.status === "analyzed") {
+  if (state.scan.status === "analyzed" && state.result && state.scan.overall_score !== null) {
+    const overall = state.scan.overall_score;
+    const { result } = state;
     return (
-      <section className="space-y-5 rounded-3xl bg-white p-7 shadow-sm">
-        <div>
-          <p className="text-sm text-[#5B6B60]">{state.scan.product_name ?? "Your product"}</p>
-          <h1 className="font-display text-4xl font-extrabold">{state.scan.overall_score}/100</h1>
-          <p className="mt-1 text-[15px] text-[#1E6B45]">Submitted! Your points are on your rewards page, and we’ll let you know there when it’s accepted.</p>
-        </div>
-        <ol className="space-y-3">
-          {state.ingredients.map((ing, i) => (
-            <li key={i} className="flex gap-3">
-              <span aria-hidden className={`mt-1.5 h-3 w-3 shrink-0 rounded-full ${BAND[ing.band ?? ""] ?? "bg-neutral-300"}`} />
-              <div>
-                <p className="font-semibold">
-                  {ing.name} <span className="font-normal text-[#5B6B60]">· {ing.score ?? "–"}</span>
-                </p>
-                {ing.reason && <p className="text-sm text-[#3D4C42]">{ing.reason}</p>}
-              </div>
-            </li>
-          ))}
-        </ol>
+      <div className="space-y-5">
+        <section className="space-y-4 rounded-3xl bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-5">
+            <ScoreRing score={overall} className="h-28 w-28" />
+            <div className="min-w-0 space-y-1">
+              <h1 className="font-display text-2xl font-extrabold tracking-tight">{state.scan.product_name ?? "Your product"}</h1>
+              <p className="text-[#3D4C42]">
+                Overall: <strong>{BAND_LABEL[bandFor(overall)]}</strong> ({overall}/100)
+              </p>
+              {result.allergens.length > 0 && <p className="text-sm text-[#5B6B60]">Contains: {result.allergens.join(", ")}</p>}
+            </div>
+          </div>
+          <p className="text-[15px] text-[#1E6B45]">Submitted! Your points are on your rewards page, and we’ll let you know there when it’s accepted.</p>
+        </section>
+        {result.off && (
+          <OffCrossCheck off={result.off} labelScore={result.label_score} externalScore={result.external_score} overall={overall} />
+        )}
+        <IngredientList ingredients={result.ingredients} />
+        <p className="text-xs text-[#5B6B60]">Scores are a general nutrition rubric, not medical advice.</p>
         <div className="grid gap-3">
           <a href={page} className={`${btn} bg-[#1E6B45] text-white`}>
             Scan another product
           </a>
-          <a href="/me" className={`${btn} bg-[#F6F7F2] text-[#14201A]`}>
+          <a href="/me" className={`${btn} bg-white text-[#14201A]`}>
             Back to rewards
           </a>
         </div>
-      </section>
+      </div>
     );
   }
 
