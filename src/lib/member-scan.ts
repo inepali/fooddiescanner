@@ -1,5 +1,7 @@
 // Rules for member submissions (client-safe, unit tested).
-// A submission = one label photo + one product photo + the member's own ~60 second video.
+// Scanners and video contributors submit separately:
+//   scan  = ingredient label photo + product photo (read and scored right away)
+//   video = product photo + the member's own ~60 second video (+ product name), reviewed by the admin
 
 export const VIDEO_MIN_S = 45;
 export const VIDEO_MAX_S = 75;
@@ -36,14 +38,47 @@ export function videoLengthProblem(seconds: unknown): string | null {
 }
 
 export type Part = "label" | "product_image" | "product_video";
-export const PARTS: { id: Part; label: string }[] = [
-  { id: "label", label: "Ingredient label photo" },
-  { id: "product_image", label: "Product photo" },
-  { id: "product_video", label: "Your 60-second video" },
-];
+export type SubmissionKind = "scan" | "video";
 
-/** Which parts are still missing, in the order they're asked for. */
-export function missingParts(have: Iterable<string>): Part[] {
+export const PART_LABELS: Record<Part, string> = {
+  label: "Ingredient label photo",
+  product_image: "Product photo",
+  product_video: "Your 60-second video",
+};
+
+const KIND_PARTS: Record<SubmissionKind, Part[]> = {
+  scan: ["label", "product_image"],
+  video: ["product_image", "product_video"],
+};
+
+export function submissionKind(v: unknown): SubmissionKind {
+  return v === "video" ? "video" : "scan";
+}
+
+/** The parts a submission of this kind needs, in the order they're asked for. */
+export function partsFor(kind: SubmissionKind): { id: Part; label: string }[] {
+  return KIND_PARTS[kind].map((id) => ({ id, label: PART_LABELS[id] }));
+}
+
+/** Which of this kind's parts are still missing, in order. */
+export function missingParts(have: Iterable<string>, kind: SubmissionKind = "scan"): Part[] {
   const set = new Set(have);
-  return PARTS.map((p) => p.id).filter((p) => !set.has(p));
+  return KIND_PARTS[kind].filter((p) => !set.has(p));
+}
+
+/** Video contributors are members invited at the "creator" tier. */
+export function canSubmit(kind: SubmissionKind, tier: string): boolean {
+  return kind === "scan" || tier === "creator";
+}
+
+/** Product name typed by a video contributor: 2-80 characters, whitespace tidied. */
+export function normalizeProductName(v: unknown): string | null {
+  const s = typeof v === "string" ? v.replace(/\s+/g, " ").trim() : "";
+  return s.length >= 2 && s.length <= 80 ? s : null;
+}
+
+/** The notice a member gets when their submission is accepted. */
+export function acceptedMessage(kind: SubmissionKind, product: string | null): string {
+  const name = product?.trim() || "your product";
+  return kind === "video" ? `Your video for ${name} was accepted! 🎉` : `Your scan of ${name} was accepted! 🎉`;
 }

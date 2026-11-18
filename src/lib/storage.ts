@@ -1,4 +1,4 @@
-import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { CopyObjectCommand, DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 // Cloudflare R2 (S3-compatible) storage. Server-only. Images (label photos,
@@ -100,4 +100,12 @@ export async function objectSize(bucket: MediaBucket, key: string): Promise<numb
   } catch {
     return null;
   }
+}
+
+/** Copies an object within one bucket on R2 itself (nothing passes through the server). */
+export async function copyMedia(bucket: MediaBucket, fromKey: string, toKey: string) {
+  const name = bucketName(bucket);
+  await client().send(
+    new CopyObjectCommand({ Bucket: name, Key: toKey, CopySource: `${name}/${fromKey.split("/").map(encodeURIComponent).join("/")}` }),
+  );
 }

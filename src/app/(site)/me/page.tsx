@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { RewardDetailsForm } from "@/components/site/MemberForms";
 import { memberFromToken } from "@/lib/member-auth";
+import { canSubmit } from "@/lib/member-scan";
 import { MEMBER_ACCESS_COOKIE, MEMBER_REFRESH_COOKIE, rewardsMissing } from "@/lib/members";
 import { supabase } from "@/lib/supabase";
 
@@ -25,16 +26,46 @@ export default async function MePage() {
     .eq("creator_id", member.id)
     .maybeSingle();
   const missing = rewardsMissing(member);
-  const { data: recent } = await supabase()
-    .from("scans")
-    .select("id, product_name, overall_score, status, review_status")
-    .eq("creator_id", member.id)
-    .not("submitted_at", "is", null)
-    .order("submitted_at", { ascending: false })
-    .limit(10);
+  const [{ data: recent }, { data: notices }] = await Promise.all([
+    supabase()
+      .from("scans")
+      .select("id, product_name, overall_score, status, review_status, submission_kind")
+      .eq("creator_id", member.id)
+      .not("submitted_at", "is", null)
+      .order("submitted_at", { ascending: false })
+      .limit(10),
+    supabase()
+      .from("member_notifications")
+      .select("id, message, created_at")
+      .eq("creator_id", member.id)
+      .is("read_at", null)
+      .order("created_at", { ascending: false })
+      .limit(10),
+  ]);
+  const videos = canSubmit("video", member.tier);
 
   return (
     <main className="mx-auto max-w-md space-y-6 px-5 pb-20 pt-6 sm:px-8">
+      {notices && notices.length > 0 && (
+        <section aria-live="polite" className="space-y-3 rounded-3xl border-2 border-[#1E6B45] bg-white p-6 shadow-sm">
+          <ul className="space-y-2">
+            {notices.map((n) => (
+              <li key={n.id} className="text-[15px] font-semibold text-[#1E6B45]">
+                {n.message}
+                <span className="block text-[13px] font-normal text-[#5B6B60]">
+                  {new Date(n.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <form action="/api/members/notifications" method="post">
+            <button type="submit" className="min-h-11 text-sm font-semibold text-[#5B6B60]">
+              Got it
+            </button>
+          </form>
+        </section>
+      )}
+
       <section className="space-y-4 rounded-3xl bg-white p-7 shadow-sm">
         <div>
           <p className="text-sm text-[#5B6B60]">@{member.handle}{member.tier === "creator" ? " · Video creator" : ""}</p>
@@ -53,18 +84,32 @@ export default async function MePage() {
         <a href="/me/scan" className="flex h-12 w-full items-center justify-center rounded-xl bg-[#1E6B45] text-base font-semibold text-white">
           Scan a product
         </a>
+        {videos && (
+          <a href="/me/video" className="flex h-12 w-full items-center justify-center rounded-xl bg-[#F6F7F2] text-base font-semibold text-[#1E6B45]">
+            Send a video
+          </a>
+        )}
       </section>
 
       {recent && recent.length > 0 && (
         <section className="space-y-3 rounded-3xl bg-white p-7 shadow-sm">
-          <h2 className="text-xl font-bold">Your scans</h2>
+          <h2 className="text-xl font-bold">{videos ? "Your scans and videos" : "Your scans"}</h2>
           <ul className="divide-y divide-[#E6EAE4]">
             {recent.map((s) => (
               <li key={s.id} className="flex items-center justify-between gap-3 py-3">
-                <span className="min-w-0 truncate font-medium">{s.product_name ?? "Unnamed product"}</span>
+                <span className="min-w-0 truncate font-medium">
+                  {s.submission_kind === "video" ? "🎬 " : ""}
+                  {s.product_name ?? "Unnamed product"}
+                </span>
                 <span className="shrink-0 text-sm text-[#5B6B60]">
-                  {s.status === "analyzed" ? `${s.overall_score}/100` : "Reading…"}
-                  {s.review_status === "approved" ? " · Approved" : s.review_status === "rejected" ? " · Not approved" : " · In review"}
+                  {s.submission_kind === "video" ? "Video" : s.status === "analyzed" ? `${s.overall_score}/100` : "Reading…"}
+                  {s.review_status === "approved" ? (
+                    <strong className="text-[#1E6B45]"> · Accepted</strong>
+                  ) : s.review_status === "rejected" ? (
+                    " · Not accepted"
+                  ) : (
+                    " · Waiting for review"
+                  )}
                 </span>
               </li>
             ))}

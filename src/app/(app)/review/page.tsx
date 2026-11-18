@@ -19,15 +19,19 @@ type Row = {
   is_public: boolean;
   submitted_at: string;
   creator_id: string;
+  submission_kind: "scan" | "video" | null;
 };
 
-/** Member submissions: watch the video, check the photos, approve (optionally make public) or reject. */
+/**
+ * Member submissions, scans and videos alike: watch the video, check the photos, generate the
+ * final video in the studio, then accept (the member gets a notice) or reject.
+ */
 export default async function ReviewPage({ searchParams }: Props) {
   const show = (await searchParams).show === "done" ? "done" : "pending";
   const db = supabase();
   let q = db
     .from("scans")
-    .select("id, product_name, overall_score, status, review_status, is_public, submitted_at, creator_id")
+    .select("id, product_name, overall_score, status, review_status, is_public, submitted_at, creator_id, submission_kind")
     .not("creator_id", "is", null)
     .not("submitted_at", "is", null)
     .order("submitted_at", { ascending: show === "pending" })
@@ -78,8 +82,17 @@ export default async function ReviewPage({ searchParams }: Props) {
             <article key={r.id} className="space-y-3 rounded-2xl bg-white p-4">
               <header className="flex flex-wrap items-baseline justify-between gap-2">
                 <div className="min-w-0">
+                  <p className="text-[12px] font-semibold uppercase tracking-wide text-neutral-400">
+                    {r.submission_kind === "video" ? "Video submission" : "Scan submission"}
+                  </p>
                   <h2 className="truncate text-lg font-semibold">
-                    {r.status === "analyzed" ? <Link href={`/scans/${r.id}`}>{r.product_name ?? "Unnamed product"}</Link> : "Still reading…"}
+                    {r.status === "analyzed" ? (
+                      <Link href={`/scans/${r.id}`}>{r.product_name ?? "Unnamed product"}</Link>
+                    ) : r.submission_kind === "video" ? (
+                      r.product_name ?? "Unnamed product"
+                    ) : (
+                      "Still reading…"
+                    )}
                   </h2>
                   <p className="text-sm text-neutral-500">
                     @{c?.handle ?? "?"}
@@ -104,7 +117,7 @@ export default async function ReviewPage({ searchParams }: Props) {
                   <track kind="captions" />
                 </video>
               )}
-              <p className="text-sm text-neutral-500">{f.seconds ? `Video: ${Math.round(f.seconds)} s` : "No video found"}</p>
+              <p className="text-sm text-neutral-500">{f.seconds ? `Video: ${Math.round(f.seconds)} s` : "No video"}</p>
               <div className="grid grid-cols-2 gap-2">
                 {[f.label && { src: f.label, alt: "Ingredient label" }, f.product && { src: f.product, alt: "Product" }]
                   .filter((x): x is { src: string; alt: string } => Boolean(x))
@@ -115,6 +128,14 @@ export default async function ReviewPage({ searchParams }: Props) {
                     </a>
                   ))}
               </div>
+              {r.submission_kind === "video" && (
+                <Link
+                  href={r.status === "analyzed" ? `/scans/${r.id}` : `/new/${r.id}`}
+                  className="flex h-12 items-center justify-center rounded-xl bg-neutral-100 font-semibold text-neutral-800"
+                >
+                  {r.status === "analyzed" ? "Generate the video →" : "Add label or barcode, then generate the video →"}
+                </Link>
+              )}
               <ReviewActions id={r.id} status={r.review_status} isPublic={r.is_public} />
             </article>
           );

@@ -1,6 +1,6 @@
 import { json, paramId } from "@/lib/http";
 import { assertEditable, memberHandler, ownScan } from "@/lib/member-routes";
-import { missingParts } from "@/lib/member-scan";
+import { missingParts, partsFor } from "@/lib/member-scan";
 import { deleteMedia, mediaUrl } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
 
@@ -30,7 +30,8 @@ export const GET = memberHandler(async (_req, member, ctx) => {
     scan,
     photos,
     video: video ? { duration_s: video.duration_s } : null,
-    missing: missingParts(rows.map((m) => m.kind as string)),
+    parts: partsFor(scan.kind),
+    missing: missingParts(rows.map((m) => m.kind as string), scan.kind),
     ingredients,
   });
 });
@@ -42,7 +43,7 @@ export const DELETE = memberHandler(async (_req, member, ctx) => {
   const db = supabase();
   const { data: media } = await db.from("scan_media").select("kind, storage_path").eq("scan_id", scan.id);
   await Promise.allSettled(
-    (media ?? []).map((m) => deleteMedia(m.kind === "product_video" ? "videos" : "images", m.storage_path)),
+    (media ?? []).map((m) => deleteMedia(m.kind === "product_video" || m.kind === "clip" ? "videos" : "images", m.storage_path)),
   );
   await db.from("scans").delete().eq("id", scan.id);
   return json({ ok: true });

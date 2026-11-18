@@ -24,7 +24,7 @@ export async function deleteScan(db: SupabaseClient, id: string): Promise<{ file
   };
 
   const { data: media } = await db.from("scan_media").select("kind, storage_path").eq("scan_id", id);
-  for (const m of media ?? []) add(m.kind === "clip" ? "videos" : "images", m.storage_path);
+  for (const m of media ?? []) add(m.kind === "clip" || m.kind === "product_video" ? "videos" : "images", m.storage_path);
   const { data: videos } = await db.from("videos").select("audio_path, video_path").eq("scan_id", id);
   for (const v of videos ?? []) {
     add("videos", v.audio_path);

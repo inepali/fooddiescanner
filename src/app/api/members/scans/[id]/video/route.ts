@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { HttpError, json, paramId } from "@/lib/http";
-import { assertEditable, memberHandler, ownScan } from "@/lib/member-routes";
+import { assertEditable, assertPart, memberHandler, ownScan } from "@/lib/member-routes";
 import { videoLengthProblem } from "@/lib/member-scan";
 import { deleteMedia, objectSize, presignUpload } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
@@ -12,6 +12,7 @@ export const runtime = "nodejs";
 export const POST = memberHandler(async (req, member, ctx) => {
   const scan = await ownScan(member, await paramId(ctx));
   assertEditable(scan);
+  assertPart(scan, "product_video");
   const body = (await req.json().catch(() => ({}))) as { filename?: string; contentType?: string; size?: number; duration?: number };
   const type = videoTypeFor(body.filename ?? "", body.contentType ?? "");
   if (!type) throw new HttpError("Use an MP4, MOV or WebM video.");
@@ -28,6 +29,7 @@ export const POST = memberHandler(async (req, member, ctx) => {
 export const PUT = memberHandler(async (req, member, ctx) => {
   const scan = await ownScan(member, await paramId(ctx));
   assertEditable(scan);
+  assertPart(scan, "product_video");
   const { key, duration } = (await req.json().catch(() => ({}))) as { key?: string; duration?: number };
   if (typeof key !== "string" || !key.startsWith(`scans/${scan.id}/member-video-`) || key.includes("..")) throw new HttpError("Bad upload key.");
   const lengthProblem = videoLengthProblem(duration);

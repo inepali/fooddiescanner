@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-/** Approve (and choose whether it joins the public library) or reject a member's submission. */
+/** Accept (and choose whether it joins the public library) or reject a member's submission. Accepting notifies the member. */
 export default function ReviewActions({ id, status, isPublic }: { id: string; status: string; isPublic: boolean }) {
   const router = useRouter();
   const [makePublic, setMakePublic] = useState(status === "pending" ? true : isPublic);
@@ -33,12 +33,12 @@ export default function ReviewActions({ id, status, isPublic }: { id: string; st
     <div className="space-y-2">
       {status !== "pending" && (
         <p className="text-sm font-medium">
-          {status === "approved" ? `Approved${isPublic ? " · public" : " · private"}` : "Rejected · points taken back"}
+          {status === "approved" ? `Accepted · member notified${isPublic ? " · public" : " · private"}` : "Rejected · points taken back"}
         </p>
       )}
       <label className="flex min-h-11 items-center gap-2 text-sm">
         <input type="checkbox" checked={makePublic} onChange={(e) => setMakePublic(e.target.checked)} className="h-5 w-5" />
-        Add to the public library when approved
+        Add to the public library when accepted
       </label>
       <div className="grid grid-cols-2 gap-2">
         <button
@@ -50,7 +50,7 @@ export default function ReviewActions({ id, status, isPublic }: { id: string; st
           Reject
         </button>
         <button type="button" disabled={busy} onClick={() => decide("approved")} className="h-12 rounded-xl bg-accent font-semibold text-white disabled:opacity-50">
-          {busy ? "Saving…" : status === "approved" ? "Save" : "Approve"}
+          {busy ? "Saving…" : status === "approved" ? "Save" : "Accept"}
         </button>
       </div>
       {error && (

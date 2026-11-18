@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { HttpError, json, paramId } from "@/lib/http";
-import { assertEditable, memberHandler, ownScan } from "@/lib/member-routes";
+import { assertEditable, assertPart, memberHandler, ownScan } from "@/lib/member-routes";
 import { deleteMedia, putMedia } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
 
@@ -17,6 +17,7 @@ export const POST = memberHandler(async (req, member, ctx) => {
   const kind = form.get("kind");
   const file = form.get("file");
   if (kind !== "label" && kind !== "product_image") throw new HttpError("Unknown photo kind.");
+  assertPart(scan, kind);
   if (!(file instanceof File) || file.size === 0) throw new HttpError("A photo is required.");
   if (!TYPES.includes(file.type)) throw new HttpError("Use a JPEG, PNG or WebP photo.");
   if (file.size > MAX_BYTES) throw new HttpError("Photo is too large (max 4 MB).", 413);

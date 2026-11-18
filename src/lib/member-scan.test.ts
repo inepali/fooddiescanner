@@ -1,6 +1,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { dailySubmitLimit, missingParts, nextSubmitAt, videoLengthProblem, waitText } from "./member-scan.ts";
+import {
+  acceptedMessage,
+  canSubmit,
+  dailySubmitLimit,
+  missingParts,
+  nextSubmitAt,
+  normalizeProductName,
+  partsFor,
+  submissionKind,
+  videoLengthProblem,
+  waitText,
+} from "./member-scan.ts";
 
 test("one submission per 24 hours by default", () => {
   assert.equal(dailySubmitLimit(undefined), 1);
@@ -32,8 +43,31 @@ test("videos must be about a minute", () => {
   assert.ok(videoLengthProblem("x"));
 });
 
-test("missing parts come back in order", () => {
-  assert.deepEqual(missingParts([]), ["label", "product_image", "product_video"]);
-  assert.deepEqual(missingParts(["product_video", "label"]), ["product_image"]);
-  assert.deepEqual(missingParts(["label", "product_image", "product_video", "clip"]), []);
+test("scans and videos need different parts, in order", () => {
+  assert.deepEqual(missingParts([]), ["label", "product_image"]);
+  assert.deepEqual(missingParts([], "scan"), ["label", "product_image"]);
+  assert.deepEqual(missingParts(["product_image"], "scan"), ["label"]);
+  assert.deepEqual(missingParts(["label", "product_image", "clip"], "scan"), []);
+  assert.deepEqual(missingParts([], "video"), ["product_image", "product_video"]);
+  assert.deepEqual(missingParts(["label", "product_video"], "video"), ["product_image"]);
+  assert.deepEqual(missingParts(["product_image", "product_video"], "video"), []);
+  assert.deepEqual(partsFor("video").map((p) => p.id), ["product_image", "product_video"]);
+});
+
+test("submission kind, who may send videos, product names", () => {
+  assert.equal(submissionKind("video"), "video");
+  assert.equal(submissionKind(undefined), "scan");
+  assert.equal(submissionKind("junk"), "scan");
+  assert.equal(canSubmit("scan", "scanner"), true);
+  assert.equal(canSubmit("video", "scanner"), false);
+  assert.equal(canSubmit("video", "creator"), true);
+  assert.equal(normalizeProductName("  Cheez   Its  "), "Cheez Its");
+  assert.equal(normalizeProductName("x"), null);
+  assert.equal(normalizeProductName("a".repeat(81)), null);
+  assert.equal(normalizeProductName(5), null);
+});
+
+test("accepted notices name the product", () => {
+  assert.match(acceptedMessage("video", "Oreos"), /video for Oreos was accepted/);
+  assert.match(acceptedMessage("scan", null), /scan of your product was accepted/);
 });
