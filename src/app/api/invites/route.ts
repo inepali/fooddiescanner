@@ -32,3 +32,19 @@ export async function POST(req: Request) {
   }
   return NextResponse.json({ error: "Couldn’t make a unique code. Try again." }, { status: 500 });
 }
+
+/** PATCH { code } → stops a code from working (it expires now). */
+export async function PATCH(req: Request) {
+  const body = (await req.json().catch(() => ({}))) as { code?: unknown };
+  const code = typeof body.code === "string" ? body.code.trim().toUpperCase() : "";
+  if (!/^[A-Z0-9]{6,12}$/.test(code)) return NextResponse.json({ error: "Unknown code." }, { status: 400 });
+  const { data, error } = await supabase()
+    .from("invites")
+    .update({ expires_at: new Date().toISOString() })
+    .eq("code", code)
+    .select("code")
+    .maybeSingle();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!data) return NextResponse.json({ error: "Unknown code." }, { status: 404 });
+  return NextResponse.json({ ok: true });
+}
