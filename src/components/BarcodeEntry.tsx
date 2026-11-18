@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePoll } from "@/lib/use-poll";
 
 type Found = { barcode: string; name: string | null; brands: string | null; ingredients: string | null };
 
@@ -23,10 +24,9 @@ export default function BarcodeEntry({ scanId, onFound }: { scanId: string; onFo
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  useEffect(() => {
-    setCanScan("BarcodeDetector" in window && Boolean(navigator.mediaDevices?.getUserMedia));
-    // Picks up a barcode looked up on the other device (phone <-> computer), and any saved earlier.
-    const check = () =>
+  // Picks up a barcode looked up on the other device (phone <-> computer), and any saved earlier.
+  const check = useCallback(
+    () =>
       fetch(`/api/scans/${scanId}/barcode`)
         .then((r) => r.json())
         .then((d: { barcode: string | null; name: string | null; ingredients: string | null }) => {
@@ -36,14 +36,16 @@ export default function BarcodeEntry({ scanId, onFound }: { scanId: string; onFo
             onFound?.(f);
           }
         })
-        .catch(() => {});
-    void check();
-    const timer = setInterval(() => {
-      if (document.visibilityState === "visible") check();
-    }, 5000);
-    return () => clearInterval(timer);
+        .catch(() => {}),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scanId]);
+    [scanId],
+  );
+  useEffect(() => {
+    setCanScan("BarcodeDetector" in window && Boolean(navigator.mediaDevices?.getUserMedia));
+    void check();
+  }, [check]);
+  // Once a barcode is found there is nothing left to wait for; otherwise poll only while the page is in use.
+  usePoll(check, 5000, { enabled: !found });
 
   const stop = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
