@@ -25,6 +25,13 @@ export default async function MePage() {
     .eq("creator_id", member.id)
     .maybeSingle();
   const missing = rewardsMissing(member);
+  const { data: recent } = await supabase()
+    .from("scans")
+    .select("id, product_name, overall_score, status, review_status")
+    .eq("creator_id", member.id)
+    .not("submitted_at", "is", null)
+    .order("submitted_at", { ascending: false })
+    .limit(10);
 
   return (
     <main className="mx-auto max-w-md space-y-6 px-5 pb-20 pt-6 sm:px-8">
@@ -43,7 +50,27 @@ export default async function MePage() {
             <dd className="text-2xl font-bold">{board?.first_scans ?? 0}</dd>
           </div>
         </dl>
+        <a href="/me/scan" className="flex h-12 w-full items-center justify-center rounded-xl bg-[#1E6B45] text-base font-semibold text-white">
+          Scan a product
+        </a>
       </section>
+
+      {recent && recent.length > 0 && (
+        <section className="space-y-3 rounded-3xl bg-white p-7 shadow-sm">
+          <h2 className="text-xl font-bold">Your scans</h2>
+          <ul className="divide-y divide-[#E6EAE4]">
+            {recent.map((s) => (
+              <li key={s.id} className="flex items-center justify-between gap-3 py-3">
+                <span className="min-w-0 truncate font-medium">{s.product_name ?? "Unnamed product"}</span>
+                <span className="shrink-0 text-sm text-[#5B6B60]">
+                  {s.status === "analyzed" ? `${s.overall_score}/100` : "Reading…"}
+                  {s.review_status === "approved" ? " · Approved" : s.review_status === "rejected" ? " · Not approved" : " · In review"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="space-y-4 rounded-3xl bg-white p-7 shadow-sm">
         <div className="space-y-1">
