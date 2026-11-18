@@ -251,12 +251,14 @@ test("auto-advance: steps in order, video only with uploaded clips, never posts"
   const st = { hasScript: false, hasAudio: false, hasCopy: false, isPublic: false, uploadedClips: 0, hasVideo: false, rendering: false };
   assert.equal(nextAutoStep(st), "script");
   assert.equal(nextAutoStep({ ...st, hasScript: true }), "voice");
-  assert.equal(nextAutoStep({ ...st, hasScript: true, hasAudio: true }), "social");
-  assert.equal(nextAutoStep({ ...st, hasScript: true, hasAudio: true, hasCopy: true }), "public");
-  const ready = { ...st, hasScript: true, hasAudio: true, hasCopy: true, isPublic: true };
+  const voiced = { ...st, hasScript: true, hasAudio: true };
+  assert.equal(nextAutoStep({ ...voiced, uploadedClips: 2 }), "video"); // video comes right after voice
+  assert.equal(nextAutoStep(voiced), "social"); // no clips yet: skip video, keep going
+  assert.equal(nextAutoStep({ ...voiced, uploadedClips: 2, rendering: true }), "social"); // copy while it renders
+  assert.equal(nextAutoStep({ ...voiced, hasCopy: true }), "public");
+  const ready = { ...voiced, hasCopy: true, isPublic: true };
   assert.equal(nextAutoStep(ready), null); // no clips: wait for your upload
   assert.equal(nextAutoStep({ ...ready, uploadedClips: 2 }), "video");
-  assert.equal(nextAutoStep({ ...ready, uploadedClips: 2, rendering: true }), null);
   assert.equal(nextAutoStep({ ...ready, uploadedClips: 2, hasVideo: true }), null); // posting stays manual
   assert.equal(secondsLeft(0), IDLE_SECONDS);
   assert.equal(secondsLeft(61_500), 59);
