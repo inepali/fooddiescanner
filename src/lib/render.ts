@@ -34,6 +34,9 @@ export function parseProgressSeconds(chunk: string): number | null {
 export const WIDTH = 1080;
 export const HEIGHT = 1920;
 export const FPS = 30;
+/** Size the blurred background is computed at before being scaled up. */
+const BG_W = WIDTH / 4;
+const BG_H = HEIGHT / 4;
 /** Score ring overlay: size and distance from the top (clear of the app UI). */
 export const RING_SIZE = 380;
 export const RING_TOP = 250; // clear of TikTok's search bar and account name
@@ -89,7 +92,8 @@ export function buildFfmpegArgs(o: RenderOptions): string[] {
       if (seg.fit === "blur") {
         filters.push(
           `[${i}:v]${timing},fps=${FPS},split[bg${i}][fg${i}];` +
-            `[bg${i}]scale=${WIDTH}:${HEIGHT}:force_original_aspect_ratio=increase,crop=${WIDTH}:${HEIGHT},boxblur=30:5[bgb${i}];` +
+            // Blur a quarter-size copy and scale it back up: looks the same behind the footage, ~16x fewer pixels to blur.
+            `[bg${i}]scale=${BG_W}:${BG_H}:force_original_aspect_ratio=increase,crop=${BG_W}:${BG_H},boxblur=8:2,scale=${WIDTH}:${HEIGHT}[bgb${i}];` +
             `[fg${i}]scale=${WIDTH}:${HEIGHT}:force_original_aspect_ratio=decrease[fgs${i}];` +
             `[bgb${i}][fgs${i}]overlay=(W-w)/2:(H-h)/2,setsar=1,format=yuv420p[v${i}]`,
         );
@@ -214,10 +218,12 @@ export async function runFfmpeg(
   args: string[],
   bin?: string,
   onProgress?: (outputSeconds: number) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   const exe = bin ?? (await ffmpegPath());
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(exe, args, { stdio: ["ignore", "pipe", "pipe"] });
+    // `signal` kills ffmpeg (e.g. on Cancel) so it stops using CPU right away.
+    const child = spawn(exe, args, { stdio: ["ignore", "pipe", "pipe"], signal });
     child.stdout.on("data", (d: Buffer) => {
       const seconds = parseProgressSeconds(d.toString());
       if (seconds !== null) onProgress?.(seconds);
@@ -226,7 +232,9 @@ export async function runFfmpeg(
     child.stderr.on("data", (d: Buffer) => {
       err = (err + d.toString()).slice(-2000);
     });
-    child.on("error", (e) => reject(new Error(`Could not start ffmpeg (${exe}): ${e.message}`)));
+    child.on("error", (e) =>
+      reject(signal?.aborted ? new Error("ffmpeg was stopped.") : new Error(`Could not start ffmpeg (${exe}): ${e.message}`)),
+    );
     child.on("close", (code) =>
       code === 0 ? resolve() : reject(new Error(`ffmpeg failed (exit ${code}): ${err.trim().split("\n").slice(-4).join(" | ")}`)),
     );
