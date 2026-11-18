@@ -2,13 +2,23 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { downscale, readJson } from "@/lib/image";
-import { PARTS, videoLengthProblem, type Part } from "@/lib/member-scan";
+import { videoLengthProblem, type Part, type SubmissionKind } from "@/lib/member-scan";
 
-// Member scan: label photo → product photo → own 60 s video → submit → ingredient breakdown.
+// Two separate member flows:
+//   scan:  label photo → product photo → submit → ingredient breakdown
+//   video: product photo → own 60 s video → product name → submit → waits for review
 
 type Ingredient = { name: string; score: number | null; band: string | null; reason: string | null };
 type State = {
-  scan: { id: string; status: string; overall_score: number | null; product_name: string | null };
+  scan: {
+    id: string;
+    status: string;
+    overall_score: number | null;
+    product_name: string | null;
+    submitted_at: string | null;
+    review_status: string | null;
+  };
+  parts: { id: Part; label: string }[];
   photos: { kind: string; url: string }[];
   video: { duration_s: number | null } | null;
   missing: Part[];
@@ -40,8 +50,10 @@ function readDuration(file: File): Promise<number> {
   });
 }
 
-export default function MemberScan() {
+export default function MemberScan({ kind = "scan" }: { kind?: SubmissionKind }) {
+  const page = kind === "video" ? "/me/video" : "/me/scan";
   const [id, setId] = useState<string | null>(null);
+  const [productName, setProductName] = useState("");
   const [state, setState] = useState<State | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -53,8 +65,12 @@ export default function MemberScan() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/members/scans", { method: "POST" });
-        if (res.status === 401) return window.location.assign("/signin?next=/me/scan");
+        const res = await fetch("/api/members/scans", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind }),
+        });
+        if (res.status === 401) return window.location.assign(`/signin?next=${page}`);
         const { id: scanId } = await readJson<{ id: string; error?: string }>(res);
         setId(scanId);
         await load(scanId);
@@ -62,7 +78,7 @@ export default function MemberScan() {
         setError(e instanceof Error ? e.message : "Couldn’t start a scan.");
       }
     })();
-  }, [load]);
+  }, [load, kind, page]);
 
   async function run(label: string, fn: () => Promise<void>) {
     setBusy(label);
@@ -119,7 +135,13 @@ export default function MemberScan() {
   const submit = () =>
     id &&
     run("submit", async () => {
-      await readJson(await fetch(`/api/members/scans/${id}/submit`, { method: "POST" }));
+      await readJson(
+        await fetch(`/api/members/scans/${id}/submit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(kind === "video" ? { product_name: productName } : {}),
+        }),
+      );
     });
 
   if (!state) {
@@ -132,13 +154,35 @@ export default function MemberScan() {
     );
   }
 
+  if (kind === "video" && state.scan.submitted_at) {
+    const accepted = state.scan.review_status === "approved";
+    return (
+      <section className="space-y-5 rounded-3xl bg-white p-7 shadow-sm">
+        <div>
+          <p className="text-sm text-[#5B6B60]">{state.scan.product_name ?? "Your product"}</p>
+          <h1 className="font-display text-3xl font-extrabold tracking-tight">{accepted ? "Video accepted! 🎉" : "Video sent!"}</h1>
+          <p className="mt-1 text-[15px] text-[#3D4C42]">
+            {accepted
+              ? "Thanks! Your video was accepted."
+              : "We’ll review it and let you know on your rewards page when it’s accepted."}
+          </p>
+        </div>
+        <div className="grid gap-3">
+          <a href="/me" className={`${btn} bg-[#1E6B45] text-white`}>
+            Back to rewards
+          </a>
+        </div>
+      </section>
+    );
+  }
+
   if (state.scan.status === "analyzed") {
     return (
       <section className="space-y-5 rounded-3xl bg-white p-7 shadow-sm">
         <div>
           <p className="text-sm text-[#5B6B60]">{state.scan.product_name ?? "Your product"}</p>
           <h1 className="font-display text-4xl font-extrabold">{state.scan.overall_score}/100</h1>
-          <p className="mt-1 text-[15px] text-[#1E6B45]">Submitted! Your points are on your rewards page.</p>
+          <p className="mt-1 text-[15px] text-[#1E6B45]">Submitted! Your points are on your rewards page, and we’ll let you know there when it’s accepted.</p>
         </div>
         <ol className="space-y-3">
           {state.ingredients.map((ing, i) => (
@@ -154,7 +198,7 @@ export default function MemberScan() {
           ))}
         </ol>
         <div className="grid gap-3">
-          <a href="/me/scan" className={`${btn} bg-[#1E6B45] text-white`}>
+          <a href={page} className={`${btn} bg-[#1E6B45] text-white`}>
             Scan another product
           </a>
           <a href="/me" className={`${btn} bg-[#F6F7F2] text-[#14201A]`}>
@@ -171,11 +215,15 @@ export default function MemberScan() {
   return (
     <section className="space-y-5 rounded-3xl bg-white p-7 shadow-sm">
       <div className="space-y-1">
-        <h1 className="font-display text-3xl font-extrabold tracking-tight">Scan a product</h1>
-        <p className="text-[15px] text-[#3D4C42]">Three things, then we’ll break down every ingredient. You can submit one scan every 24 hours.</p>
+        <h1 className="font-display text-3xl font-extrabold tracking-tight">{kind === "video" ? "Send a video" : "Scan a product"}</h1>
+        <p className="text-[15px] text-[#3D4C42]">
+          {kind === "video"
+            ? "A product photo and your one-minute video. We review every video and let you know when it’s accepted."
+            : "Two photos, then we’ll break down every ingredient. You can submit one scan every 24 hours."}
+        </p>
       </div>
       <ol className="space-y-3">
-        {PARTS.map((p, i) => (
+        {state.parts.map((p, i) => (
           <li key={p.id} className="flex items-center gap-3 rounded-2xl border border-[#D8DED6] p-3">
             <span
               aria-hidden
@@ -211,6 +259,18 @@ export default function MemberScan() {
           </li>
         ))}
       </ol>
+      {kind === "video" && (
+        <label className="block space-y-1">
+          <span className="font-semibold">Product name</span>
+          <input
+            value={productName}
+            onChange={(e) => setProductName(e.target.value)}
+            maxLength={80}
+            placeholder="e.g. Honey Nut Cheerios"
+            className="h-12 w-full rounded-xl border border-[#D8DED6] px-3 text-base"
+          />
+        </label>
+      )}
       {error && (
         <p role="alert" className="text-sm text-red-700">
           {error}
@@ -219,10 +279,16 @@ export default function MemberScan() {
       <button
         type="button"
         onClick={submit}
-        disabled={busy !== null || state.missing.length > 0}
+        disabled={busy !== null || state.missing.length > 0 || (kind === "video" && productName.trim().length < 2)}
         className={`${btn} bg-[#1E6B45] text-white`}
       >
-        {busy === "submit" ? "Reading your label…" : "Submit and see the score"}
+        {busy === "submit"
+          ? kind === "video"
+            ? "Sending…"
+            : "Reading your label…"
+          : kind === "video"
+            ? "Send for review"
+            : "Submit and see the score"}
       </button>
     </section>
   );
