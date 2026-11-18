@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import MemberBarcode from "@/components/site/MemberBarcode";
 import { downscale, readJson } from "@/lib/image";
 import { videoLengthProblem, type Part, type SubmissionKind } from "@/lib/member-scan";
 
@@ -17,6 +18,7 @@ type State = {
     product_name: string | null;
     submitted_at: string | null;
     review_status: string | null;
+    off_code: string | null;
   };
   parts: { id: Part; label: string }[];
   photos: { kind: string; url: string }[];
@@ -61,6 +63,12 @@ export default function MemberScan({ kind = "scan" }: { kind?: SubmissionKind })
   const load = useCallback(async (scanId: string) => {
     setState(await readJson<State & { error?: string }>(await fetch(`/api/members/scans/${scanId}`)));
   }, []);
+
+  // A barcode fills in the product name; the member can still change it.
+  const knownName = state?.scan.product_name ?? null;
+  useEffect(() => {
+    if (kind === "video" && knownName) setProductName((cur) => cur || knownName);
+  }, [kind, knownName]);
 
   useEffect(() => {
     (async () => {
@@ -219,9 +227,19 @@ export default function MemberScan({ kind = "scan" }: { kind?: SubmissionKind })
         <p className="text-[15px] text-[#3D4C42]">
           {kind === "video"
             ? "A product photo and your one-minute video. We review every video and let you know when it’s accepted."
-            : "Two photos, then we’ll break down every ingredient. You can submit one scan every 24 hours."}
+            : "Scan the barcode or snap the label, add a product photo, and we’ll break down every ingredient. You can submit one scan every 24 hours."}
         </p>
       </div>
+      {id && (
+        <MemberBarcode
+          scanId={id}
+          kind={kind}
+          saved={state.scan.off_code}
+          productName={state.scan.product_name}
+          disabled={busy !== null}
+          onChange={() => load(id)}
+        />
+      )}
       <ol className="space-y-3">
         {state.parts.map((p, i) => (
           <li key={p.id} className="flex items-center gap-3 rounded-2xl border border-[#D8DED6] p-3">
@@ -234,7 +252,10 @@ export default function MemberScan({ kind = "scan" }: { kind?: SubmissionKind })
             <div className="min-w-0 flex-1">
               <p className="font-semibold">{p.label}</p>
               <p className="text-[13px] text-[#5B6B60]">
-                {p.id === "label" && "Flat, close and well lit, so we can read every word."}
+                {p.id === "label" &&
+                  (state.scan.off_code && !thumb("label")
+                    ? "Not needed: we have the barcode."
+                    : "Flat, close and well lit, so we can read every word.")}
                 {p.id === "product_image" && "The front of the package."}
                 {p.id === "product_video" &&
                   (state.video?.duration_s ? `Uploaded (${Math.round(state.video.duration_s)} s)` : "About a minute: show the product and talk about it.")}

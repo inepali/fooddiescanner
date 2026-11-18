@@ -1,7 +1,7 @@
 // Rules for member submissions (client-safe, unit tested).
 // Scanners and video contributors submit separately:
-//   scan  = ingredient label photo + product photo (read and scored right away)
-//   video = product photo + the member's own ~60 second video (+ product name), reviewed by the admin
+//   scan  = ingredient label photo (or barcode) + product photo (read and scored right away)
+//   video = product photo + the member's own ~60 second video (+ product name, optional barcode), reviewed by the admin
 
 export const VIDEO_MIN_S = 45;
 export const VIDEO_MAX_S = 75;
@@ -60,9 +60,13 @@ export function partsFor(kind: SubmissionKind): { id: Part; label: string }[] {
   return KIND_PARTS[kind].map((id) => ({ id, label: PART_LABELS[id] }));
 }
 
-/** Which of this kind's parts are still missing, in order. */
-export function missingParts(have: Iterable<string>, kind: SubmissionKind = "scan"): Part[] {
+/**
+ * Which of this kind's parts are still missing, in order. A barcode found on Open Food Facts
+ * (with its ingredient list) stands in for the label photo.
+ */
+export function missingParts(have: Iterable<string>, kind: SubmissionKind = "scan", opts: { barcode?: boolean } = {}): Part[] {
   const set = new Set(have);
+  if (opts.barcode) set.add("label");
   return KIND_PARTS[kind].filter((p) => !set.has(p));
 }
 

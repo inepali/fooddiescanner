@@ -1,13 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useBarcodeCamera } from "@/lib/use-barcode-camera";
 import { usePoll } from "@/lib/use-poll";
 
 type Found = { barcode: string; name: string | null; brands: string | null; ingredients: string | null };
-
-// Minimal typing for the browser's built-in barcode reader (Chrome / Edge / Android).
-type Detector = { detect(src: CanvasImageSource): Promise<{ rawValue: string }[]> };
-type DetectorCtor = new (opts: { formats: string[] }) => Detector;
 
 /**
  * Identify a product by barcode instead of photographing a curved label.
@@ -19,10 +16,6 @@ export default function BarcodeEntry({ scanId, onFound }: { scanId: string; onFo
   const [found, setFound] = useState<Found | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [scanning, setScanning] = useState(false);
-  const [canScan, setCanScan] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
 
   // Picks up a barcode looked up on the other device (phone <-> computer), and any saved earlier.
   const check = useCallback(
@@ -41,18 +34,10 @@ export default function BarcodeEntry({ scanId, onFound }: { scanId: string; onFo
     [scanId],
   );
   useEffect(() => {
-    setCanScan("BarcodeDetector" in window && Boolean(navigator.mediaDevices?.getUserMedia));
     void check();
   }, [check]);
   // Once a barcode is found there is nothing left to wait for; otherwise poll only while the page is in use.
   usePoll(check, 5000, { enabled: !found });
-
-  const stop = useCallback(() => {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    setScanning(false);
-  }, []);
-  useEffect(() => stop, [stop]);
 
   const lookup = useCallback(
     async (value: string) => {
@@ -78,42 +63,14 @@ export default function BarcodeEntry({ scanId, onFound }: { scanId: string; onFo
     [scanId, onFound],
   );
 
-  async function startCamera() {
-    setError(null);
-    try {
-      const Ctor = (window as unknown as { BarcodeDetector: DetectorCtor }).BarcodeDetector;
-      const detector = new Ctor({ formats: ["ean_13", "ean_8", "upc_a", "upc_e"] });
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      streamRef.current = stream;
-      setScanning(true);
-      // Wait for the <video> to mount.
-      await new Promise((r) => setTimeout(r, 50));
-      const video = videoRef.current;
-      if (!video) return stop();
-      video.srcObject = stream;
-      await video.play();
-      const tick = async () => {
-        if (!streamRef.current) return;
-        try {
-          const hits = await detector.detect(video);
-          const value = hits[0]?.rawValue;
-          if (value) {
-            stop();
-            setCode(value);
-            void lookup(value);
-            return;
-          }
-        } catch {
-          // keep trying
-        }
-        setTimeout(tick, 250);
-      };
-      void tick();
-    } catch (e) {
-      stop();
-      setError(e instanceof Error && e.name === "NotAllowedError" ? "Camera permission was denied." : "Couldn't start the camera. Type the number instead.");
-    }
-  }
+  const onCode = useCallback(
+    (value: string) => {
+      setCode(value);
+      void lookup(value);
+    },
+    [lookup],
+  );
+  const { videoRef, scanning, canScan, cameraError, start: startCamera, stop } = useBarcodeCamera(onCode);
 
   return (
     <section className="space-y-3 rounded-2xl bg-white p-4">
@@ -174,7 +131,7 @@ export default function BarcodeEntry({ scanId, onFound }: { scanId: string; onFo
           <p className="text-xs text-neutral-400">Crowd-sourced, so check it against the pack if something looks off.</p>
         </div>
       )}
-      {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {(error ?? cameraError) && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error ?? cameraError}</p>}
     </section>
   );
 }

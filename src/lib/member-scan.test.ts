@@ -52,6 +52,10 @@ test("scans and videos need different parts, in order", () => {
   assert.deepEqual(missingParts(["label", "product_video"], "video"), ["product_image"]);
   assert.deepEqual(missingParts(["product_image", "product_video"], "video"), []);
   assert.deepEqual(partsFor("video").map((p) => p.id), ["product_image", "product_video"]);
+  // A barcode stands in for the label photo.
+  assert.deepEqual(missingParts(["product_image"], "scan", { barcode: true }), []);
+  assert.deepEqual(missingParts([], "scan", { barcode: true }), ["product_image"]);
+  assert.deepEqual(missingParts(["product_image"], "video", { barcode: true }), ["product_video"]);
 });
 
 test("submission kind, who may send videos, product names", () => {

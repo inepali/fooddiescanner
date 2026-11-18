@@ -31,7 +31,7 @@ export const GET = memberHandler(async (_req, member, ctx) => {
     photos,
     video: video ? { duration_s: video.duration_s } : null,
     parts: partsFor(scan.kind),
-    missing: missingParts(rows.map((m) => m.kind as string), scan.kind),
+    missing: missingParts(rows.map((m) => m.kind as string), scan.kind, { barcode: Boolean(scan.off_code) }),
     ingredients,
   });
 });
