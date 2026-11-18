@@ -22,6 +22,11 @@ export default async function LoginPage({ searchParams }: Props) {
           <p className="text-[15px] text-neutral-500">Sign in to scan labels and make videos.</p>
         </div>
         <LoginForm next={next} withEmail={adminEmails().length > 0} />
+        {adminEmails().length > 0 && (
+          <p className="text-right text-sm">
+            <a href="/forgot?to=login" className="font-medium text-accent">Forgot password?</a>
+          </p>
+        )}
         <p className="text-center text-sm">
           <a href="/" className="text-accent">
             ← Back to the public library

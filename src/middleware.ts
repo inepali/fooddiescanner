@@ -14,7 +14,7 @@ export async function middleware(req: NextRequest) {
   if (path === "/robots.txt" || path === "/sitemap.xml") return NextResponse.next();
   // Rewards members: they have their own Supabase email + password sign-in, checked by each route.
   // /api/invites is NOT here: making invite codes stays behind APP_PASSWORD.
-  if (path === "/join" || path === "/signin" || path === "/me" || path.startsWith("/me/") || path.startsWith("/api/members/")) return NextResponse.next();
+  if (path === "/join" || path === "/signin" || path === "/forgot" || path === "/reset" || path === "/me" || path.startsWith("/me/") || path.startsWith("/api/members/")) return NextResponse.next();
   // The sign-in page and its endpoints.
   if (path === "/login" || path === "/api/auth/login" || path === "/api/auth/logout") return NextResponse.next();
   // Terms and Privacy must be public: TikTok, Google and Meta reviewers open them without a password.
