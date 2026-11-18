@@ -1,8 +1,8 @@
 // Render worker: runs the same video render as the app (src/lib/render-job.ts), but on a container
-// host with cheap CPU (Cloud Run) instead of inside a Vercel function.
+// host with cheap CPU (Fly.io or Cloud Run) instead of inside a Vercel function.
 //
 // POST /render  { scanId, jobId, reveal }  with  Authorization: Bearer $RENDER_WORKER_SECRET
-//   Renders the video and answers once it is done. Progress, cancel and the result all go through the
+//   Renders the video. Answers 200 at once, streams a space every 15 s, and ends with {"ok":true} when done. Progress, cancel and the result all go through the
 //   `jobs` row exactly as before, so the browser keeps polling /api/jobs/[id] on Vercel.
 // GET /healthz  ->  200
 //
@@ -62,11 +62,21 @@ const server = createServer(async (req, res) => {
     return send(400, { error: "scanId and jobId must be UUIDs." });
   }
 
+  // Answer 200 right away and send a space every 15 s until the render is done: Fly's proxy closes a
+  // connection after 60 s with no data, and leading whitespace still parses as JSON. The caller keeps
+  // the connection open the whole time, which also stops Fly from auto-stopping this machine mid-render.
+  res.writeHead(200, { "Content-Type": "application/json" });
+  res.write(" ");
+  const keepAlive = setInterval(() => res.write(" "), 15_000);
   const started = Date.now();
-  // runRender never throws: success, failure and cancel are all written to the jobs row.
-  await runRender(scanId, jobId, parseReveal(input.reveal));
+  try {
+    // runRender never throws: success, failure and cancel are all written to the jobs row.
+    await runRender(scanId, jobId, parseReveal(input.reveal));
+  } finally {
+    clearInterval(keepAlive);
+  }
   console.log(`render ${jobId} finished in ${((Date.now() - started) / 1000).toFixed(1)}s`);
-  send(200, { ok: true });
+  res.end(JSON.stringify({ ok: true }));
 });
 
 const port = Number(process.env.PORT) || 8080;

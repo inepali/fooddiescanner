@@ -1,7 +1,7 @@
 import { supabase } from "./supabase";
 import type { RevealChoice } from "./reveal";
 
-// Hands a render to the render worker (worker/server.ts, on Cloud Run) so ffmpeg's CPU isn't
+// Hands a render to the render worker (worker/server.ts, on Fly.io or Cloud Run) so ffmpeg's CPU isn't
 // billed as Vercel Active CPU. Vercel only waits on the network here, which uses no Active CPU.
 // Unset RENDER_WORKER_URL to render inside the Vercel function again.
 
@@ -22,7 +22,11 @@ export async function renderOnWorker(url: string, scanId: string, jobId: string,
       // Just under the route's maxDuration (300 s).
       signal: AbortSignal.timeout(290_000),
     });
-    if (!res.ok) problem = `The render worker answered ${res.status}: ${(await res.text().catch(() => "")).slice(0, 200)}`;
+    // Read to the end: the worker answers 200 at once and streams keep-alive spaces until the render is done.
+    // Holding the connection open is what keeps the worker's machine running.
+    const body = await res.text();
+    if (!res.ok) problem = `The render worker answered ${res.status}: ${body.trim().slice(0, 200)}`;
+    else if (!body.trim()) problem = "The render worker stopped before the render finished.";
   } catch (err) {
     // Out of time to wait: the worker may still finish. Its heartbeats decide (a silent job is written off).
     if (err instanceof Error && err.name === "TimeoutError") return;
