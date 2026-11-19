@@ -35,7 +35,7 @@ async function toCards(db: SupabaseClient, scans: ScanRow[]): Promise<ScanCard[]
     db.from("scan_media").select("id, scan_id, kind, storage_path, sort_order").in("scan_id", ids).in("kind", ["product_image", "label"]),
   ]);
   if (error) throw new Error(`Could not load ingredients: ${error.message}`);
-  const covers = coverRowsByScan(media ?? []);
+  const covers = coverRowsByScan((media ?? []) as { id: string; scan_id: string; kind: string; storage_path: string; sort_order: number }[]);
   const byScan = new Map<string, IngRow[]>();
   for (const row of (data ?? []) as IngRow[]) {
     const list = byScan.get(row.scan_id) ?? [];
