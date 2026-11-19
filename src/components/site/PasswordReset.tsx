@@ -72,7 +72,7 @@ export function ResetForm({ admin }: { admin: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
-  const signIn = admin ? "/login" : "/signin";
+  const signIn = admin ? "/admin" : "/signin";
   const forgot = admin ? "/forgot?to=login" : "/forgot";
 
   useEffect(() => {

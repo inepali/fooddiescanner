@@ -17,7 +17,7 @@ export default async function ForgotPage({ searchParams }: Props) {
         </div>
         <ForgotForm admin={admin} />
         <p className="text-center text-sm">
-          Remembered it? <Link href={admin ? "/login" : "/signin"} className="font-semibold text-[#1E6B45]">Sign in</Link>
+          Remembered it? <Link href={admin ? "/admin" : "/signin"} className="font-semibold text-[#1E6B45]">Sign in</Link>
         </p>
       </div>
     </main>

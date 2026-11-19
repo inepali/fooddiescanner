@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, safeEqual, sessionSecret, verifySession } from "@/lib/session";
 
 // Optional password for the private scanner. Required before you can connect Instagram / TikTok.
-// Set APP_PASSWORD. Unset = open, as before. Signing in happens on /login (a session cookie),
+// Set APP_PASSWORD. Unset = open, as before. Signing in happens on /admin (a session cookie),
 // not in the browser's password popup.
 export async function middleware(req: NextRequest) {
   const secret = sessionSecret();
@@ -16,7 +16,7 @@ export async function middleware(req: NextRequest) {
   // /api/invites is NOT here: making invite codes stays behind APP_PASSWORD.
   if (path === "/join" || path === "/signin" || path === "/forgot" || path === "/reset" || path === "/me" || path.startsWith("/me/") || path.startsWith("/api/members/")) return NextResponse.next();
   // The sign-in page and its endpoints.
-  if (path === "/login" || path === "/api/auth/login" || path === "/api/auth/logout") return NextResponse.next();
+  if (path === "/admin" || path === "/api/auth/login" || path === "/api/auth/logout") return NextResponse.next();
   // Terms and Privacy must be public: TikTok, Google and Meta reviewers open them without a password.
   // The install manifest and icons are fetched without credentials, so they can't sit behind the password.
   if (/^\/(manifest\.webmanifest|icon-\d+\.png|apple-touch-icon\.png)$/.test(path)) return NextResponse.next();
@@ -39,7 +39,7 @@ export async function middleware(req: NextRequest) {
   if (path.startsWith("/api/")) {
     return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   }
-  const login = new URL("/login", req.url);
+  const login = new URL("/admin", req.url);
   login.searchParams.set("next", path + req.nextUrl.search);
   return NextResponse.redirect(login);
 }
