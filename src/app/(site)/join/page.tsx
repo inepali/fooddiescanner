@@ -17,7 +17,7 @@ export default async function JoinPage({ searchParams }: Props) {
         <div className="space-y-2">
           <h1 className="font-display text-3xl font-extrabold tracking-tight">Scan your pantry, earn rewards</h1>
           <p className="text-[15px] text-[#3D4C42]">
-            Every product you scan joins the public library. You get 10 points per scan, and 20 more when you’re the first to scan a product.
+            Every product you scan joins the public library. You get 10 points per scan, 20 for a real product photo, and 20 more when you’re the first to scan a product. Invited video creators earn 1,000 points for each accepted video (at least 45 seconds).
           </p>
         </div>
         <JoinForm code={code} inviteOnly={inviteOnly} />

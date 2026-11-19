@@ -40,6 +40,26 @@ export function videoLengthProblem(seconds: unknown): string | null {
 export type Part = "label" | "product_image" | "product_video";
 export type SubmissionKind = "scan" | "video";
 
+/** Points per reward. Keep in step with supabase/migrations/0019_photo_and_video_points.sql. */
+export const POINTS = { scan: 10, photo: 20, first_scan: 20, video: 1000 } as const;
+
+/** What each step of a submission earns (the video's points land when it's accepted). */
+export const PART_POINTS: Record<Part, number> = {
+  label: POINTS.scan,
+  product_image: POINTS.photo,
+  product_video: POINTS.video,
+};
+
+/** Points a complete submission of this kind earns (not counting first-to-scan). */
+export function submissionPoints(kind: SubmissionKind): number {
+  return KIND_PARTS[kind].reduce((sum, p) => sum + PART_POINTS[p], 0);
+}
+
+/** "1,000" */
+export function formatPoints(n: number): string {
+  return n.toLocaleString("en-US");
+}
+
 export const PART_LABELS: Record<Part, string> = {
   label: "Ingredient label photo",
   product_image: "Product photo",
@@ -84,5 +104,7 @@ export function normalizeProductName(v: unknown): string | null {
 /** The notice a member gets when their submission is accepted. */
 export function acceptedMessage(kind: SubmissionKind, product: string | null): string {
   const name = product?.trim() || "your product";
-  return kind === "video" ? `Your video for ${name} was accepted! 🎉` : `Your scan of ${name} was accepted! 🎉`;
+  return kind === "video"
+    ? `Your video for ${name} was accepted! +${formatPoints(submissionPoints("video"))} points 🎉`
+    : `Your scan of ${name} was accepted! 🎉`;
 }
