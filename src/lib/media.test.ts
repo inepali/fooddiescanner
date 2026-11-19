@@ -265,7 +265,7 @@ test("auto-advance: steps in order, video only with uploaded clips, never posts"
   assert.equal(secondsLeft(500_000), 0);
 });
 
-import { coversByScan, pickCover } from "./media.ts";
+import { coverImagePath, coverRowsByScan, coversByScan, pickCover } from "./media.ts";
 
 test("card photo: first product photo, else the label, else none", () => {
   const label = { kind: "label", storage_path: "l.jpg", sort_order: 0 };
@@ -282,4 +282,13 @@ test("card photo: first product photo, else the label, else none", () => {
     { scan_id: "s2", kind: "label", storage_path: "x.jpg", sort_order: 0 },
   ]);
   assert.deepEqual([...covers], [["s1", "l.jpg"], ["s2", "p.jpg"]]);
+});
+
+test("card photo rows keep their ids for the cached /img address", () => {
+  const rows = coverRowsByScan([
+    { scan_id: "s1", id: "m1", kind: "label", storage_path: "l.jpg", sort_order: 0 },
+    { scan_id: "s1", id: "m2", kind: "product_image", storage_path: "p.jpg", sort_order: 1 },
+  ]);
+  assert.equal(rows.get("s1")?.id, "m2");
+  assert.equal(coverImagePath("m2"), "/img/m2");
 });

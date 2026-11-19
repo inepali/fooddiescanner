@@ -10,6 +10,13 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [{ source: "/login", destination: "/admin", permanent: true }];
   },
+  // Card thumbnails: resized once by Vercel's image optimizer and kept for a year
+  // (the /img/<media id> source never changes for a given id).
+  images: {
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 31536000,
+    localPatterns: [{ pathname: "/img/**" }],
+  },
   experimental: {
     // Label photos and product videos can be large.
     serverActions: { bodySizeLimit: "50mb" },

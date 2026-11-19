@@ -1,9 +1,8 @@
 // Read-only queries for the public library (fooddiescanner.com). Only scans you marked public
 // (is_public) and that finished analysis are ever returned here.
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { coversByScan } from "./media.ts";
+import { coverImagePath, coverRowsByScan } from "./media.ts";
 import { bandFor, normalizeName, type Band } from "./scoring.ts";
-import { mediaUrls } from "./storage.ts";
 
 export type ScanCard = {
   id: string;
@@ -14,12 +13,9 @@ export type ScanCard = {
   /** Up to three of the lowest-scoring ingredients (score under 40), worst first. */
   flags: string[];
   ingredientCount: number;
-  /** Signed URL of the card photo (product photo, else label), or null if the scan has none. */
+  /** Stable /img/<media id> address of the card photo (product photo, else label), or null if none. */
   image: string | null;
 };
-
-// Pages are cached for minutes; card photo links stay valid much longer than that.
-const IMAGE_URL_SECONDS = 24 * 3600;
 
 const FLAG_BELOW = 40;
 const CARD_COLS = "id, product_name, overall_score, created_at";
@@ -36,11 +32,10 @@ async function toCards(db: SupabaseClient, scans: ScanRow[]): Promise<ScanCard[]
   const ids = scans.map((s) => s.id);
   const [{ data, error }, { data: media }] = await Promise.all([
     db.from("scan_ingredients").select("scan_id, raw_name, score").in("scan_id", ids),
-    db.from("scan_media").select("scan_id, kind, storage_path, sort_order").in("scan_id", ids).in("kind", ["product_image", "label"]),
+    db.from("scan_media").select("id, scan_id, kind, storage_path, sort_order").in("scan_id", ids).in("kind", ["product_image", "label"]),
   ]);
   if (error) throw new Error(`Could not load ingredients: ${error.message}`);
-  const covers = coversByScan(media ?? []);
-  const urls = await mediaUrls([...covers.values()].map((key) => ({ bucket: "images" as const, key })), IMAGE_URL_SECONDS);
+  const covers = coverRowsByScan(media ?? []);
   const byScan = new Map<string, IngRow[]>();
   for (const row of (data ?? []) as IngRow[]) {
     const list = byScan.get(row.scan_id) ?? [];
@@ -63,7 +58,7 @@ async function toCards(db: SupabaseClient, scans: ScanRow[]): Promise<ScanCard[]
       createdAt: s.created_at,
       flags,
       ingredientCount: ings.length,
-      image: covers.has(s.id) ? (urls.get(covers.get(s.id)!) ?? null) : null,
+      image: covers.has(s.id) ? coverImagePath(covers.get(s.id)!.id) : null,
     };
   });
 }

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { BAND_LABEL, BAND_STYLE, type ScanCard as Card } from "@/lib/library";
 
@@ -17,11 +18,12 @@ export default function ScanCard({ scan }: { scan: Card }) {
           <h3 className="font-display text-xl font-bold leading-snug [overflow-wrap:anywhere]">{scan.name}</h3>
         </div>
         {scan.image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={scan.image}
             alt={scan.name}
-            loading="lazy"
+            width={96}
+            height={96}
+            sizes="96px"
             className="h-24 w-24 shrink-0 rounded-2xl border border-[#E2E6DE] bg-[#F6F7F2] object-cover"
           />
         ) : (
