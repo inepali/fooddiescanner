@@ -264,3 +264,22 @@ test("auto-advance: steps in order, video only with uploaded clips, never posts"
   assert.equal(secondsLeft(61_500), 59);
   assert.equal(secondsLeft(500_000), 0);
 });
+
+import { coversByScan, pickCover } from "./media.ts";
+
+test("card photo: first product photo, else the label, else none", () => {
+  const label = { kind: "label", storage_path: "l.jpg", sort_order: 0 };
+  assert.equal(pickCover([]), null);
+  assert.equal(pickCover([label]), "l.jpg");
+  assert.equal(
+    pickCover([label, { kind: "product_image", storage_path: "b.jpg", sort_order: 2 }, { kind: "product_image", storage_path: "a.jpg", sort_order: -1 }]),
+    "a.jpg",
+  );
+  assert.equal(pickCover([{ kind: "clip", storage_path: "c.mp4", sort_order: 0 }]), null);
+  const covers = coversByScan([
+    { scan_id: "s1", ...label },
+    { scan_id: "s2", kind: "product_image", storage_path: "p.jpg", sort_order: 0 },
+    { scan_id: "s2", kind: "label", storage_path: "x.jpg", sort_order: 0 },
+  ]);
+  assert.deepEqual([...covers], [["s1", "l.jpg"], ["s2", "p.jpg"]]);
+});

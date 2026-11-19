@@ -25,9 +25,14 @@ export async function analyzeScan(id: string) {
     .order("sort_order", { ascending: false })
     .limit(1)
     .maybeSingle();
-  // No photo is fine when a barcode was scanned: the ingredient list comes from Open Food Facts.
+  // A barcode can stand in for the label (the ingredient list comes from Open Food Facts).
   if (!label && !scan.off_code) {
     return NextResponse.json({ error: "Upload the ingredient label photo or scan the barcode first." }, { status: 400 });
+  }
+  // Every scan needs at least one photo: it's the picture on the scan's card.
+  if (!label) {
+    const { count } = await db.from("scan_media").select("id", { count: "exact", head: true }).eq("scan_id", id).eq("kind", "product_image");
+    if (!count) return NextResponse.json({ error: "Add a product photo first. It’s shown on the scan’s card." }, { status: 400 });
   }
 
   await db.from("scans").update({ status: "analyzing" }).eq("id", id);

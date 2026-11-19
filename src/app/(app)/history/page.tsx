@@ -4,6 +4,7 @@ import AppShell from "@/components/AppShell";
 import { supabase } from "@/lib/supabase";
 import DeleteScanButton from "@/components/DeleteScanButton";
 import { bandFor, type Band } from "@/lib/scoring";
+import { coversByScan } from "@/lib/media";
 import { mediaUrls } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +46,9 @@ type Props = { searchParams: Promise<{ show?: string }> };
 
 /** Your own scans plus every member scan and video (even ones not read yet), newest first. */
 export default async function HistoryPage({ searchParams }: Props) {
-  const waitingOnly = (await searchParams).show === "waiting";
+  const show = (await searchParams).show;
+  const waitingOnly = show === "waiting";
+  const needsPhotoOnly = show === "photo";
   const db = supabase();
   let q = db
     .from("scans")
@@ -61,26 +64,31 @@ export default async function HistoryPage({ searchParams }: Props) {
   if (error) throw new Error(`Could not load history: ${error.message}`);
   const scans = (data ?? []) as ScanRow[];
 
-  // Who sent each member submission, and what they sent (product photo thumbnail, video or not).
+  // Who sent each member submission, every scan's card photo, and which ones came with a video.
+  const allIds = scans.map((s) => s.id);
   const memberRows = scans.filter((s) => s.creator_id);
-  const memberIds = memberRows.map((s) => s.id);
   const creatorIds = [...new Set(memberRows.map((s) => s.creator_id as string))];
   const [{ data: creators }, { data: media }] = await Promise.all([
     creatorIds.length
       ? db.from("creators").select("id, handle").in("id", creatorIds)
       : Promise.resolve({ data: [] as { id: string; handle: string | null }[] }),
-    memberIds.length
-      ? db.from("scan_media").select("scan_id, kind, storage_path").in("scan_id", memberIds).in("kind", ["product_image", "product_video"])
-      : Promise.resolve({ data: [] as { scan_id: string; kind: string; storage_path: string }[] }),
+    allIds.length
+      ? db
+          .from("scan_media")
+          .select("scan_id, kind, storage_path, sort_order")
+          .in("scan_id", allIds)
+          .in("kind", ["product_image", "label", "product_video"])
+      : Promise.resolve({ data: [] as { scan_id: string; kind: string; storage_path: string; sort_order: number }[] }),
   ]);
   const handle = new Map((creators ?? []).map((c) => [c.id, c.handle]));
-  const photoKey = new Map<string, string>();
-  const hasVideo = new Set<string>();
-  for (const m of media ?? []) {
-    if (m.kind === "product_video") hasVideo.add(m.scan_id);
-    else if (!photoKey.has(m.scan_id)) photoKey.set(m.scan_id, m.storage_path);
-  }
-  const thumbs = await mediaUrls([...photoKey.values()].map((key) => ({ bucket: "images" as const, key })), 3600);
+  const hasVideo = new Set((media ?? []).filter((m) => m.kind === "product_video").map((m) => m.scan_id));
+  const photoKey = coversByScan(media ?? []);
+  const noPhoto = scans.filter((s) => !photoKey.has(s.id)).length;
+  const listed = needsPhotoOnly ? scans.filter((s) => !photoKey.has(s.id)) : scans;
+  const thumbs = await mediaUrls(
+    listed.filter((s) => photoKey.has(s.id)).map((s) => ({ bucket: "images" as const, key: photoKey.get(s.id)! })),
+    3600,
+  );
 
   const scored = scans.filter((s) => s.status === "analyzed" && s.overall_score !== null);
   const average = scored.length ? Math.round(scored.reduce((sum, s) => sum + (s.overall_score as number), 0) / scored.length) : null;
@@ -101,20 +109,27 @@ export default async function HistoryPage({ searchParams }: Props) {
           }
         />
 
-        <div className="flex gap-2">
-          <Link href="/history" className={tab(!waitingOnly)} aria-current={!waitingOnly ? "page" : undefined}>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/history" className={tab(!waitingOnly && !needsPhotoOnly)} aria-current={!waitingOnly && !needsPhotoOnly ? "page" : undefined}>
             All
           </Link>
           <Link href="/history?show=waiting" className={tab(waitingOnly)} aria-current={waitingOnly ? "page" : undefined}>
             Waiting for review{waiting ? ` (${waiting})` : ""}
           </Link>
+          {(noPhoto > 0 || needsPhotoOnly) && (
+            <Link href="/history?show=photo" className={tab(needsPhotoOnly)} aria-current={needsPhotoOnly ? "page" : undefined}>
+              Needs photo{noPhoto ? ` (${noPhoto})` : ""}
+            </Link>
+          )}
         </div>
 
-        {scans.length === 0 ? (
-          <p className="text-neutral-600">{waitingOnly ? "Nothing waiting for review. 🎉" : "No scans yet. Scan a label to see it here."}</p>
+        {listed.length === 0 ? (
+          <p className="text-neutral-600">
+            {waitingOnly ? "Nothing waiting for review. 🎉" : needsPhotoOnly ? "Every scan has a photo. 🎉" : "No scans yet. Scan a label to see it here."}
+          </p>
         ) : (
           <ul className="divide-y overflow-hidden rounded-2xl bg-white">
-            {scans.map((s) => {
+            {listed.map((s) => {
               const analyzed = s.status === "analyzed" && s.overall_score !== null;
               const band = analyzed ? bandFor(s.overall_score as number) : null;
               const tag = s.review_status ? REVIEW_TAG[s.review_status] : null;
@@ -139,6 +154,7 @@ export default async function HistoryPage({ searchParams }: Props) {
                       <span className="block truncate text-[17px] font-medium">{s.product_name ?? "Scanned product"}</span>
                       <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-neutral-500">
                         {tag && <span className={`rounded-full px-2 py-0.5 text-[12px] font-semibold ${tag.cls}`}>{tag.text}</span>}
+                        {!photoKey.has(s.id) && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[12px] font-semibold text-red-700">No photo</span>}
                         {s.creator_id && (
                           <span>
                             {isVideo ? "Video" : "Scan"} by @{handle.get(s.creator_id) ?? "?"}
