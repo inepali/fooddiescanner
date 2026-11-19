@@ -7,6 +7,7 @@ import type { OffSummary } from "@/lib/openfoodfacts";
 import { parseScript, type VideoScript } from "@/lib/script";
 import DeleteScanButton from "@/components/DeleteScanButton";
 import ScoreRing from "@/components/ScoreRing";
+import CoverPhoto from "@/components/CoverPhoto";
 import { BAND_LABEL, IngredientList, OffCrossCheck, type BreakdownIngredient } from "@/components/ScanBreakdown";
 import ProductName from "@/components/ProductName";
 import ScriptSection from "@/components/ScriptSection";
@@ -104,6 +105,14 @@ export default async function ScanPage({ params }: { params: Promise<{ id: strin
     is_video: /\.(mp4|mov|webm|m4v)$/i.test(m.storage_path),
     uploaded: m.kind === "clip" && !m.source_media_id,
   }));
+  // The card photo: first product photo, else the label (older scans may have neither).
+  const coverRow = mediaRows.find((m) => m.kind === "product_image");
+  let coverUrl = coverRow ? (urls.get(coverRow.storage_path) ?? null) : null;
+  if (!coverRow) {
+    const { data: labelRow } = await db.from("scan_media").select("storage_path").eq("scan_id", id).eq("kind", "label").limit(1).maybeSingle();
+    if (labelRow) coverUrl = await mediaUrl("images", labelRow.storage_path as string);
+  }
+
   const studioCopy: StudioCopy[] = ((copyData ?? []) as CopyRow[]).map((c) => ({
     platform: c.platform,
     title: c.title ?? "",
@@ -185,6 +194,8 @@ export default async function ScanPage({ params }: { params: Promise<{ id: strin
           )}
         </div>
       </header>
+
+      <CoverPhoto scanId={id} url={coverUrl} isLabel={!coverRow && coverUrl !== null} />
 
       <ScanWorkspace
         ingredients={ingredientsPanel}

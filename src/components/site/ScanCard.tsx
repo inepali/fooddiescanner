@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BAND_LABEL, BAND_STYLE, type ScanCard as Card } from "@/lib/library";
 
-/** One product in the library grid: score badge, score bar, worst ingredients. Links to its report. */
+/** One product in the library grid: photo, score badge, score bar, worst ingredients. Links to its report. */
 export default function ScanCard({ scan }: { scan: Card }) {
   const style = BAND_STYLE[scan.band];
   return (
@@ -9,6 +9,15 @@ export default function ScanCard({ scan }: { scan: Card }) {
       href={`/p/${scan.id}`}
       className="group flex flex-col gap-4 rounded-[20px] border border-[#E2E6DE] bg-white p-5 text-[#14201A] transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(20,32,26,0.10)]"
     >
+      {scan.image && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={scan.image}
+          alt={scan.name}
+          loading="lazy"
+          className="-mx-5 -mt-5 aspect-[4/3] w-[calc(100%+2.5rem)] max-w-none rounded-t-[20px] bg-[#F6F7F2] object-cover"
+        />
+      )}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <p className="text-[13px] font-semibold uppercase tracking-wider text-[#56635B]">
