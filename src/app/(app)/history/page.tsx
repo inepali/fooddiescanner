@@ -40,6 +40,7 @@ type ScanRow = {
   review_status: "pending" | "approved" | "rejected" | null;
   submission_kind: "scan" | "video" | null;
   creator_id: string | null;
+  is_public: boolean;
 };
 
 type Props = { searchParams: Promise<{ show?: string }> };
@@ -52,15 +53,21 @@ export default async function HistoryPage({ searchParams }: Props) {
   const db = supabase();
   let q = db
     .from("scans")
-    .select("id, product_name, overall_score, status, created_at, submitted_at, review_status, submission_kind, creator_id")
+    .select("id, product_name, overall_score, status, created_at, submitted_at, review_status, submission_kind, creator_id, is_public")
     .or("and(status.eq.analyzed,overall_score.not.is.null),submitted_at.not.is.null")
     .order("created_at", { ascending: false })
     .limit(200);
   if (waitingOnly) q = q.eq("review_status", "pending");
-  const [{ data, error }, { count: waiting }] = await Promise.all([
+  // Counts over every analyzed scan (not just the 200 listed). Public = in the public library.
+  const analyzedCount = () => db.from("scans").select("id", { count: "exact", head: true }).eq("status", "analyzed").not("overall_score", "is", null);
+  const [{ data, error }, { count: waiting }, { count: totalCount }, { count: publicCount }] = await Promise.all([
     q,
     db.from("scans").select("id", { count: "exact", head: true }).eq("review_status", "pending"),
+    analyzedCount(),
+    analyzedCount().eq("is_public", true),
   ]);
+  const total = totalCount ?? 0;
+  const publicScans = publicCount ?? 0;
   if (error) throw new Error(`Could not load history: ${error.message}`);
   const scans = (data ?? []) as ScanRow[];
 
@@ -109,6 +116,19 @@ export default async function HistoryPage({ searchParams }: Props) {
           }
         />
 
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: "Scans", value: total },
+            { label: "Public", value: publicScans },
+            { label: "Private", value: total - publicScans },
+          ].map((c) => (
+            <div key={c.label} className="rounded-2xl bg-white px-4 py-3">
+              <p className="text-[13px] text-neutral-500">{c.label}</p>
+              <p className="text-2xl font-semibold tabular-nums">{c.value}</p>
+            </div>
+          ))}
+        </div>
+
         <div className="flex flex-wrap gap-2">
           <Link href="/history" className={tab(!waitingOnly && !needsPhotoOnly)} aria-current={!waitingOnly && !needsPhotoOnly ? "page" : undefined}>
             All
@@ -154,6 +174,12 @@ export default async function HistoryPage({ searchParams }: Props) {
                       <span className="block truncate text-[17px] font-medium">{s.product_name ?? "Scanned product"}</span>
                       <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-neutral-500">
                         {tag && <span className={`rounded-full px-2 py-0.5 text-[12px] font-semibold ${tag.cls}`}>{tag.text}</span>}
+                        {analyzed &&
+                          (s.is_public ? (
+                            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[12px] font-semibold text-blue-800">Public</span>
+                          ) : (
+                            <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[12px] font-semibold text-neutral-600">Private</span>
+                          ))}
                         {!photoKey.has(s.id) && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[12px] font-semibold text-red-700">No photo</span>}
                         {s.creator_id && (
                           <span>
