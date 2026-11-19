@@ -1,7 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  PART_POINTS,
   acceptedMessage,
+  formatPoints,
+  submissionPoints,
   canSubmit,
   dailySubmitLimit,
   missingParts,
@@ -74,4 +77,11 @@ test("submission kind, who may send videos, product names", () => {
 test("accepted notices name the product", () => {
   assert.match(acceptedMessage("video", "Oreos"), /video for Oreos was accepted/);
   assert.match(acceptedMessage("scan", null), /scan of your product was accepted/);
+});
+
+test("rewards: label 10, product photo 20, video 1000", () => {
+  assert.deepEqual(PART_POINTS, { label: 10, product_image: 20, product_video: 1000 });
+  assert.equal(submissionPoints("scan"), 30);
+  assert.equal(submissionPoints("video"), 1020);
+  assert.equal(formatPoints(1020), "1,020");
 });

@@ -5,7 +5,7 @@ import { BAND_LABEL, IngredientList, OffCrossCheck, type BreakdownIngredient } f
 import ScoreRing from "@/components/ScoreRing";
 import MemberBarcode from "@/components/site/MemberBarcode";
 import { downscale, readJson } from "@/lib/image";
-import { videoLengthProblem, type Part, type SubmissionKind } from "@/lib/member-scan";
+import { PART_POINTS, POINTS, VIDEO_MIN_S, formatPoints, submissionPoints, videoLengthProblem, type Part, type SubmissionKind } from "@/lib/member-scan";
 import type { OffSummary } from "@/lib/openfoodfacts";
 import { bandFor } from "@/lib/scoring";
 
@@ -230,8 +230,8 @@ export default function MemberScan({ kind = "scan" }: { kind?: SubmissionKind })
         <h1 className="font-display text-3xl font-extrabold tracking-tight">{kind === "video" ? "Send a video" : "Scan a product"}</h1>
         <p className="text-[15px] text-[#3D4C42]">
           {kind === "video"
-            ? "A product photo and your one-minute video. We review every video and let you know when it’s accepted."
-            : "Scan the barcode or snap the label, add a product photo, and we’ll break down every ingredient. You can submit one scan every 24 hours."}
+            ? `A product photo and your one-minute video. Earn ${formatPoints(submissionPoints("video"))} points when we accept it.`
+            : `Scan the barcode or snap the label, add a product photo, and earn ${submissionPoints("scan")} points (${POINTS.first_scan} more if you’re first to scan it). One scan every 24 hours.`}
         </p>
       </div>
       {id && (
@@ -255,14 +255,19 @@ export default function MemberScan({ kind = "scan" }: { kind?: SubmissionKind })
             </span>
             <div className="min-w-0 flex-1">
               <p className="font-semibold">{p.label}</p>
+              <p className="mt-0.5 inline-block rounded-full bg-[#FFF4D6] px-2 py-0.5 text-[12px] font-bold text-[#7A5200]">
+                +{formatPoints(PART_POINTS[p.id])} points{p.id === "product_video" ? " when accepted" : ""}
+              </p>
               <p className="text-[13px] text-[#5B6B60]">
                 {p.id === "label" &&
                   (state.scan.off_code && !thumb("label")
                     ? "Not needed: we have the barcode."
                     : "Flat, close and well lit, so we can read every word.")}
-                {p.id === "product_image" && "The front of the package."}
+                {p.id === "product_image" && "A real photo of the front of the package."}
                 {p.id === "product_video" &&
-                  (state.video?.duration_s ? `Uploaded (${Math.round(state.video.duration_s)} s)` : "About a minute: show the product and talk about it.")}
+                  (state.video?.duration_s
+                    ? `Uploaded (${Math.round(state.video.duration_s)} s)`
+                    : `About a minute (at least ${VIDEO_MIN_S} s): show the product and talk about it.`)}
               </p>
             </div>
             {p.id !== "product_video" && thumb(p.id) && (
