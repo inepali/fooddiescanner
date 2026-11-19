@@ -50,19 +50,36 @@ export default function CoverPhoto({ scanId, url, isLabel }: { scanId: string; u
         </p>
         {error && <p className="text-sm text-red-700">{error}</p>}
       </div>
-      <label className="shrink-0 cursor-pointer rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white">
-        {busy ? "Uploading…" : url && !isLabel ? "Replace" : "Add photo"}
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="sr-only"
-          disabled={busy}
-          onChange={(e) => {
-            void upload(e.target.files?.[0]);
-            e.target.value = "";
-          }}
-        />
-      </label>
+      <div className="flex shrink-0 flex-col items-stretch gap-2">
+        {/* capture opens the phone's camera app straight away; on a computer it's a file picker. */}
+        <label className="cursor-pointer rounded-xl bg-accent px-4 py-2 text-center text-sm font-medium text-white">
+          {busy ? "Uploading…" : url && !isLabel ? "Retake photo" : "Take photo"}
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="sr-only"
+            disabled={busy}
+            onChange={(e) => {
+              void upload(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+        </label>
+        <label className="cursor-pointer rounded-xl bg-neutral-100 px-4 py-2 text-center text-sm font-medium text-neutral-700">
+          Choose photo
+          <input
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            disabled={busy}
+            onChange={(e) => {
+              void upload(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+        </label>
+      </div>
     </section>
   );
 }
