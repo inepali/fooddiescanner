@@ -145,7 +145,8 @@ test("pickCandidates: best greens, worst reds, trivial water skipped", () => {
 test("prompt: groups and tone in, no numeric scores, ends on a question rule", () => {
   const p = buildPrompt({ productName: "Oat Bar", overall: 52, allergens: [], ingredients: ings, tone: "playful" });
   assert.match(p, /Upbeat, witty/);
-  assert.match(p, /FIVE BEST[^]*Whole grain oats[^]*FIVE WORST[^]*Red 40/);
+  assert.match(p, /THREE BEST[^]*Whole grain oats[^]*FOUR WORST[^]*Red 40/); // 7 real ingredients: 3 + 4, no overlap
+  assert.match(p, /SHORT LABEL/);
   assert.match(p, /may be harmful for regular consumption/); // under 60: the concerning verdict
   assert.doesNotMatch(p, /VERDICT FOR THIS PRODUCT: it is mostly good/);
   assert.match(p, /Do you eat this\?/);
@@ -158,13 +159,33 @@ test("prompt: groups and tone in, no numeric scores, ends on a question rule", (
 test("prompt: empty group is shown as none", () => {
   const p = buildPrompt({ productName: null, overall: 90, allergens: [], ingredients: [{ name: "Oats", score: 95, reason: null }] });
   assert.match(p, /VERDICT FOR THIS PRODUCT: it is mostly good/); // 60 and over: praise, extra detail on the worse ones
-  assert.match(p, /FIVE WORST[^]*Oats \[good\]/);
+  assert.match(p, /THE BEST ingredient on this label[^]*Oats \[good\][^]*THE WORST ingredients on this label[^]*\(none\)/); // one good ingredient: best only
+  assert.match(p, /skip this section/);
   assert.match(p, /if there are none, say so/);
   assert.doesNotMatch(p, /may be harmful for regular consumption/);
   const c = pickCandidates(ings);
-  assert.equal(c.best.length, 5);
+  assert.equal(c.best.length + c.worst.length, 7); // water skipped, every other ingredient used once
   assert.equal(c.worst[0].group, "poor");
   assert.ok(c.best[0].name !== c.worst[0].name);
+});
+
+test("pickCandidates: best and worst never overlap, five each at most", () => {
+  const mk = (n: number) => Array.from({ length: n }, (_, i) => ({ name: `I${i}`, score: 100 - i * 9, reason: null }));
+  for (let n = 1; n <= 14; n++) {
+    const c = pickCandidates(mk(n));
+    const names = [...c.best, ...c.worst].map((x) => x.name);
+    assert.equal(new Set(names).size, names.length, `overlap at ${n}`);
+    assert.ok(c.best.length <= 5 && c.worst.length <= 5);
+    assert.equal(names.length, Math.min(n, 10));
+  }
+  const four = pickCandidates(mk(4));
+  assert.deepEqual([four.best.length, four.worst.length], [2, 2]);
+  const p = buildPrompt({ productName: null, overall: 50, allergens: [], ingredients: mk(4) });
+  assert.match(p, /the two best ingredients and the two worst ingredients/);
+  assert.match(p, /NOT five and five/);
+  const full = buildPrompt({ productName: null, overall: 50, allergens: [], ingredients: mk(12) });
+  assert.match(full, /THE FIVE BEST[^]*THE FIVE WORST/);
+  assert.doesNotMatch(full, /SHORT LABEL/);
 });
 
 test("ensureHook ends on a question plus a like-and-comment line", () => {
