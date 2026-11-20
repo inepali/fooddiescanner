@@ -7,6 +7,7 @@ import { DEFAULT_DELIVERY, DELIVERIES, type Delivery } from "@/lib/delivery";
 import { withPublicLink } from "@/lib/public-link";
 import { REVEAL_CHOICES, type RevealChoice } from "@/lib/reveal";
 import { POSITIONS, type CustomLine, type LinePosition } from "@/lib/custom-lines";
+import { VOICE_GROUP_LABELS, type VoiceGroup } from "@/lib/voice-groups";
 import { AUTO_LABEL, nextAutoStep, secondsLeft, type AutoStep } from "@/lib/auto-advance";
 import { MAX_UPLOADS, MAX_UPLOAD_BYTES, videoTypeFor } from "@/lib/uploads";
 
@@ -168,7 +169,7 @@ export default function ScanWorkspace(props: StudioProps) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [voices, setVoices] = useState<{ id: string; name: string; free: boolean; description: string | null }[]>([]);
+  const [voices, setVoices] = useState<{ id: string; name: string; group: VoiceGroup; free: boolean; description: string | null }[]>([]);
   const [voiceId, setVoiceId] = useState("");
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [delivery, setDelivery] = useState<Delivery>(DEFAULT_DELIVERY);
@@ -565,14 +566,26 @@ export default function ScanWorkspace(props: StudioProps) {
                 disabled={busy !== null}
                 className="w-full rounded-xl bg-neutral-100 px-2 py-2"
               >
-                {voices.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name}
-                    {v.description ? ` · ${v.description}` : ""}
-                    {v.free ? "" : " (paid plan only)"}
-                  </option>
-                ))}
+                {(Object.keys(VOICE_GROUP_LABELS) as VoiceGroup[]).map((g) => {
+                  const inGroup = voices.filter((v) => v.group === g);
+                  if (inGroup.length === 0) return null;
+                  return (
+                    <optgroup key={g} label={VOICE_GROUP_LABELS[g]}>
+                      {inGroup.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name}
+                          {v.description ? ` · ${v.description}` : ""}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
               </select>
+              {!voices.some((v) => v.group === "mine") && (
+                <span className="block text-xs text-neutral-500">
+                  Don&apos;t see your own voice? It has to be in the same ElevenLabs account as the API key.
+                </span>
+              )}
             </label>
           )}
           {voices.length === 0 && (
@@ -604,6 +617,7 @@ export default function ScanWorkspace(props: StudioProps) {
           </label>
         </div>
         <p className="text-xs text-neutral-500">
+          {delivery === "original" && "As cloned: uses the settings saved on the voice in ElevenLabs, so it sounds the same as there."}
           {delivery === "natural" && "Natural: balanced and conversational."}
           {delivery === "expressive" && "Expressive: more emotion and emphasis; can sound dramatic."}
           {delivery === "steady" && "Steady: even and calm, with less variation."}

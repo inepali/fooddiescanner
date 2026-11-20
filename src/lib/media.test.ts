@@ -103,16 +103,26 @@ test("narration joins every scene voiceover in order", () => {
 
 import { parseVoices } from "./elevenlabs.ts";
 
-test("parseVoices puts free default voices first and labels them", () => {
+test("parseVoices puts your own voices first, then defaults, then library voices", () => {
   const voices = parseVoices({
     voices: [
       { voice_id: "b", name: "Zed", category: "professional", labels: { accent: "british" } },
       { voice_id: "a", name: "Sarah", category: "premade", labels: { gender: "female", accent: "american" } },
+      { voice_id: "c", name: "Sanjay", category: "cloned", labels: {} },
+      { voice_id: "d", name: "My Pro", category: "professional", is_owner: true },
       { name: "no id" },
     ],
   });
-  assert.deepEqual(voices.map((v) => [v.name, v.free]), [["Sarah", true], ["Zed", false]]);
-  assert.equal(voices[0].description, "female, american");
+  assert.deepEqual(
+    voices.map((v) => [v.name, v.group, v.free]),
+    [
+      ["My Pro", "mine", true],
+      ["Sanjay", "mine", true],
+      ["Sarah", "default", true],
+      ["Zed", "library", false],
+    ],
+  );
+  assert.equal(voices[2].description, "female, american");
   assert.deepEqual(parseVoices(null), []);
 });
 
@@ -192,20 +202,27 @@ import { speechBody } from "./elevenlabs.ts";
 import { DELIVERIES, parseDelivery } from "./delivery.ts";
 
 test("speechBody sends the chosen delivery as ElevenLabs voice settings", () => {
-  const natural = speechBody("Hi", "natural", "eleven_multilingual_v2");
+  const natural = speechBody("Hi", "natural", "eleven_multilingual_v2") as { text: string; model_id: string; voice_settings: { style: number; stability: number } };
   assert.equal(natural.text, "Hi");
   assert.equal(natural.model_id, "eleven_multilingual_v2");
   assert.deepEqual(natural.voice_settings, DELIVERIES.natural.settings);
-  const expressive = speechBody("Hi", "expressive");
+  const expressive = speechBody("Hi", "expressive") as typeof natural;
   assert.ok(expressive.voice_settings.style > natural.voice_settings.style);
   assert.ok(expressive.voice_settings.stability < natural.voice_settings.stability);
   assert.ok(DELIVERIES.steady.settings.stability > natural.voice_settings.stability);
 });
 
-test("parseDelivery falls back to natural", () => {
+test("As cloned sends no voice settings, so ElevenLabs uses the voice's own", () => {
+  const body = speechBody("Hi", "original", "eleven_multilingual_v2");
+  assert.equal("voice_settings" in body, false);
+  assert.equal(speechBody("Hi").model_id, "eleven_v4");
+  assert.equal("voice_settings" in speechBody("Hi"), false);
+});
+
+test("parseDelivery falls back to As cloned", () => {
   assert.equal(parseDelivery("steady"), "steady");
-  assert.equal(parseDelivery("loud"), "natural");
-  assert.equal(parseDelivery(null), "natural");
+  assert.equal(parseDelivery("loud"), "original");
+  assert.equal(parseDelivery(null), "original");
 });
 
 test("script prompt asks for retention hooks at 15s, 35s and the end", () => {
