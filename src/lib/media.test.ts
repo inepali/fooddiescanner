@@ -215,7 +215,7 @@ test("speechBody sends the chosen delivery as ElevenLabs voice settings", () => 
 test("As cloned sends no voice settings, so ElevenLabs uses the voice's own", () => {
   const body = speechBody("Hi", "original", "eleven_multilingual_v2");
   assert.equal("voice_settings" in body, false);
-  assert.equal(speechBody("Hi").model_id, body.model_id);
+  assert.equal(speechBody("Hi").model_id, "eleven_v4");
   assert.equal("voice_settings" in speechBody("Hi"), false);
 });
 

@@ -5,7 +5,8 @@ import type { VoiceGroup } from "./voice-groups.ts";
 
 export { VOICE_GROUP_LABELS, type VoiceGroup } from "./voice-groups.ts";
 
-const MODEL = process.env.ELEVENLABS_MODEL || "eleven_multilingual_v2";
+// Same model as the elevenlabs.io default, so a cloned voice sounds the same here as there.
+const MODEL = process.env.ELEVENLABS_MODEL || "eleven_v4";
 
 export type Speech = {
   audio: Buffer;
