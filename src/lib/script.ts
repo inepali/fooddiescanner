@@ -40,6 +40,15 @@ export type Candidate = { name: string; reason: string | null; position: number 
 
 const TRIVIAL = /^(water|filtered water|purified water|spring water|carbonated water)$/i;
 
+/** How many best and worst ingredients a video covers on a normal label. Shorter labels get fewer. */
+export const LIST_SIZE = 5;
+
+const NUMBER_WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+/** "the five best", "the best one", "no worst": spoken-style counts for the prompt. */
+function countWord(n: number): string {
+  return NUMBER_WORDS[n] ?? String(n);
+}
+
 /**
  * Ingredients worth talking about, per group: the best greens (most benefit),
  * the first yellows (biggest share of the product) and the worst reds (most
@@ -68,8 +77,19 @@ export function pickCandidates(ings: ScriptInput["ingredients"]): Record<Group, 
 
   const ranked = rows.filter((r) => !TRIVIAL.test(r.name.trim()));
   const withGroup = (r: (typeof rows)[number]) => ({ ...toCand(r), group: r.group });
-  const best = [...ranked].sort((a, b) => b.score - a.score || a.position - b.position).slice(0, 5).map(withGroup);
-  const worst = [...ranked].sort((a, b) => a.score - b.score || a.position - b.position).slice(0, 5).map(withGroup);
+  const bestSorted = [...ranked].sort((a, b) => b.score - a.score || a.position - b.position);
+  const worstSorted = [...ranked].sort((a, b) => a.score - b.score || a.position - b.position);
+  // Up to five each, but never the same ingredient in both lists: a short label is split
+  // in half, and an odd one in the middle goes wherever its group says it belongs.
+  const k = Math.min(LIST_SIZE, Math.floor(ranked.length / 2));
+  const bestRows = bestSorted.slice(0, k);
+  const worstRows = worstSorted.slice(0, k);
+  if (ranked.length < LIST_SIZE * 2 && ranked.length % 2 === 1) {
+    const middle = ranked.find((r) => !bestRows.includes(r) && !worstRows.includes(r));
+    if (middle) (middle.group === "good" ? bestRows : worstRows).push(middle);
+  }
+  const best = bestRows.map(withGroup);
+  const worst = worstRows.map(withGroup);
 
   return {
     best,
@@ -112,6 +132,34 @@ export function buildPrompt(i: ScriptInput, compact = false) {
       : list.map((x) => `- ${x.name} [${x.group}] (#${x.position} on the label)${x.reason ? `: ${x.reason.slice(0, 160)}` : ""}`).join("\n");
   const concerning = i.overall < 60;
 
+  // The video covers as many best/worst ingredients as the label really has (five each at most).
+  const nb = c.best.length;
+  const nw = c.worst.length;
+  const B = countWord(nb);
+  const W = countWord(nw);
+  const best = nb === 1 ? "the best ingredient" : `the ${B} best ingredients`;
+  const worst = nw === 1 ? "the worst ingredient" : `the ${W} worst ingredients`;
+  const short = nb < LIST_SIZE || nw < LIST_SIZE;
+  const shortNote = short
+    ? `\nSHORT LABEL: only ${nb + nw} ingredient${nb + nw === 1 ? "" : "s"} on this label ${nb + nw === 1 ? "is" : "are"} worth talking about, so this video covers ${nb === 0 ? "no best" : best} and ${nw === 0 ? "no worst" : worst}, NOT five and five. Before writing, count the ingredients in the two lists below and use exactly those numbers everywhere (hook, teasers, transitions). Never say "five" or any other count that does not match the lists. Each ingredient appears in only one of the two lists: never call the same ingredient both good and bad. With so few ingredients, spend more time on each one (what it is, why it is in there, where it sits on the label) to fill the minute${nb + nw <= 3 ? ', and say that a short ingredient list is itself worth noticing' : ""}.\n`
+    : "";
+  const bestHeader = nb === 0 ? "THE BEST ingredients" : nb === 1 ? "THE BEST ingredient" : `THE ${B.toUpperCase()} BEST ingredients`;
+  const worstHeader = nw === 0 ? "THE WORST ingredients" : nw === 1 ? "THE WORST ingredient" : `THE ${W.toUpperCase()} WORST ingredients`;
+  const hookExample =
+    nw === 0
+      ? `"Only ${B} ingredient${nb === 1 ? "" : "s"} on this label. Let's see if ${nb === 1 ? "it holds" : "they hold"} up."`
+      : nb === 0
+        ? `"I'll show you ${worst} in this. Stay for the last one."`
+        : `"I'll show you ${best} and ${worst} in this. Stay for the last one."`;
+  const goodStep =
+    nb === 0
+      ? `2. "good": skip this section (no ingredient here is on the good side); say so in one honest line inside the hook or the first "poor" scene.`
+      : `2. "good" (${nb <= 2 ? "1 scene" : "2 scenes"}): ${best.toUpperCase()}, best first, ${nb <= 2 ? "two or three short lines each" : "one short line each (about 10 to 12 words)"}: its name and one health benefit in plain words ("may support digestion", "a source of protein"). If an ingredient has nothing good to say about it, say it is simply harmless. ${nw === 0 ? "" : `End this part by asking viewers to stay, using the real count: "Now ${nw === 1 ? "the one" : `the ${W}`} I'd worry about. Stay to the end."`}`;
+  const poorStep =
+    nw === 0
+      ? `3. "poor": skip this section. Nothing on this label needs a warning: say so with relief in the outro instead of inventing a concern.`
+      : `3. "poor" (${nw <= 2 ? "1 or 2 scenes" : "2 or 3 scenes"}): ${worst.toUpperCase()}${nw > 1 ? `, saving the very worst for last (count down from number ${nw} to the worst)` : ""}. Explain the specific concern for your health for each in plain words (for example added sugar, a refined oil, a heavily processed additive) and why it matters. Say "may" where the science is not settled.`;
+
   const longNote = long
     ? `\nLONG LABEL: this product lists ${i.ingredients.length} ingredients. Do NOT try to cover them all and do not deliberate over the rest: use only the ingredients listed in the two lists below, say once that the list is long (\"a very long ingredient list\"), and answer straight away with the JSON.\n`
     : "";
@@ -120,38 +168,38 @@ export function buildPrompt(i: ScriptInput, compact = false) {
 
 TONE: ${tone.prompt}
 
-${longNote}
+${longNote}${shortNote}
 FACTS
 - Product: ${i.productName ?? "unnamed product"}
 - Overall feel (say it in words if you want, never as a number): ${overallFeel(i.overall)}
 - Allergens on the label: ${i.allergens.join(", ") || "none stated"}
 - Ingredients on the label: ${i.ingredients.length} (${c.counts.good} good, ${c.counts.fair} fair, ${c.counts.poor} poor)
 ${i.offFacts ? `- Open Food Facts says: ${i.offFacts}. Use only as supporting evidence inside the good or poor section (for example, NOVA group 4 means ultra-processed), never as the headline. Say each of these by name exactly once, in the section where it fits (for example \"Nutri-Score D\", \"NOVA group 4\", \"Green-Score B\"), because the video shows a badge for it the moment you say it.\n` : ""}
-THE FIVE BEST ingredients on this label, best first (group in brackets; never say the group or any number out loud):
+${bestHeader} on this label, best first (group in brackets; never say the group or any number out loud):
 ${tagged(c.best)}
 
-THE FIVE WORST ingredients on this label, worst first:
+${worstHeader} on this label, worst first:
 ${tagged(c.worst)}
 
 Return ONLY a JSON object (no markdown fences) shaped like:
 { "title": string, "scenes": [ { "section": "hook" | "good" | "fair" | "poor" | "outro", "seconds": integer, "visual": string, "voiceover": string${photoCount ? ', "photo": integer' : ""} } ] }
 
-STORY PLAN: "five best first, five worst last". Name the five best ingredients first, then ask viewers to stay until you reveal the five worst. ${
+STORY PLAN: "${nb === 0 ? "no best" : best} first, ${nw === 0 ? "no worst" : worst} last". ${nb === 0 ? "" : `Name ${best} first`}${nb > 0 && nw > 0 ? `, then ask viewers to stay until you reveal ${worst}.` : nw > 0 ? `Reveal ${worst}.` : "."} ${
     concerning
       ? "VERDICT FOR THIS PRODUCT: it falls on the concerning side. Say plainly, near the end, that taken together these ingredients may not be a healthy choice and that the worst ones may be harmful for regular consumption. Use \"may\" and \"can\", never state a medical fact the facts above do not support, and never call the product poison."
-      : "VERDICT FOR THIS PRODUCT: it is mostly good. Say so honestly, and let the five best get a little more time. Then, for the worse ingredients, give extra detail: only list as \"worse\" the ones marked [fair] or [poor] (skip any marked [good]; if there are fewer than five, name only those, and if there are none, say so with relief). For each worse one, say what it is, why it is there, and the specific health concern, in two short sentences instead of one."
+      : `VERDICT FOR THIS PRODUCT: it is mostly good. Say so honestly, and let ${nb === 0 ? "the good news" : best} get a little more time. Then, for the worse ingredients, give extra detail: only list as \"worse\" the ones marked [fair] or [poor] (skip any marked [good]; name only as many as there really are, and if there are none, say so with relief). For each worse one, say what it is, why it is there, and the specific health concern, in two short sentences instead of one.`
   }
 
 STRUCTURE (in this order, 7 to 9 scenes, "seconds" adding up to about 60; the retention hooks below are woven into these scenes, they are not extra scenes):
-1. "hook" (about 4 s): a scroll-stopper that promises the reveal, for example "I'll show you the five best and the five worst things in this. Stay for the last one." The first sentence is 12 words or fewer and creates a curiosity gap or a contradiction about THIS product (see MAKE IT WORTH WATCHING). Do not mention a score.
-2. "good" (2 scenes): the FIVE BEST ingredients, best first, one short line each (about 10 to 12 words): its name and one health benefit in plain words ("may support digestion", "a source of protein"). If an ingredient has nothing good to say about it, say it is simply harmless. End this part by asking viewers to stay: "Now the five I'd worry about. Stay to the end."
-3. "poor" (2 or 3 scenes): the FIVE WORST ingredients, saving the very worst for last (count down: fifth worst to worst). Explain the specific concern for your health for each in plain words (for example added sugar, a refined oil, a heavily processed additive) and why it matters. Say "may" where the science is not settled.
+1. "hook" (about 4 s): a scroll-stopper that promises the reveal, for example ${hookExample} The first sentence is 12 words or fewer and creates a curiosity gap or a contradiction about THIS product (see MAKE IT WORTH WATCHING). Do not mention a score.
+${goodStep}
+${poorStep}
 4. "outro" (about 8 s): the verdict in words (no number), then a "Try this instead" tip: tell people what to look for in a better version of this kind of product, as concrete label rules they can check in the shop ("look for one with five ingredients or fewer and no added sugar"). Name no brands and invent no numbers beyond simple label rules. Include one short, quotable "send this to someone who…" line. Then finish with a short question that invites comments, such as "Do you eat this?", and put one last short call to action right after it: "Like and comment your answer." The video MUST end with that question followed by that call to action (like and comment).
-Do not use a "fair" scene. If the label has fewer than five ingredients, use what exists.
+Do not use a "fair" scene. Cover exactly the ingredients in the two lists above, no more and no fewer, and use their real counts.
 
 KEEP PEOPLE WATCHING (retention hooks). Viewers tend to drop off around 10-15 seconds, so plant three hooks. Count time at about 2.5 spoken words per second:
 - Hook at about 0:15: the last sentence of the scene that ends near the 15-second mark is an open-loop teaser that makes people stay for what comes next, for example "But wait until you hear what's hiding in the next one." Name no ingredient and no number in the teaser itself.
-- Hook at about 0:35: the last sentence of the scene that ends near the 35-second mark is a second, stronger teaser pointing at the most concerning ingredient, which you save for after this point (put the very worst of the five in the final stretch). If nothing on the label is concerning, tease the one thing that surprised you.
+- Hook at about 0:35: the last sentence of the scene that ends near the 35-second mark is a second, stronger teaser pointing at the most concerning ingredient, which you save for after this point (put the very worst one in the final stretch). If nothing on the label is concerning, tease the one thing that surprised you.
 - Closing hook: end the "outro" with the takeaway, the "Try this instead" tip, the final question, and the like-and-comment call to action from rule 4.
 Pay each teaser off within the next 10-20 seconds. A teaser must never promise something the video does not deliver, and must not be clickbait, a scare tactic or a numeric score. Plan the scene lengths so a scene boundary lands near 0:15 and near 0:35.
 MAKE IT WORTH WATCHING AND SHARING (story craft). Treat the label like a short mystery with a reveal, not a list:
