@@ -5,7 +5,7 @@ import type { VoiceGroup } from "./voice-groups.ts";
 
 export { VOICE_GROUP_LABELS, type VoiceGroup } from "./voice-groups.ts";
 
-const MODEL = process.env.ELEVENLABS_MODEL ?? "eleven_multilingual_v2";
+const MODEL = process.env.ELEVENLABS_MODEL || "eleven_multilingual_v2";
 
 export type Speech = {
   audio: Buffer;
@@ -17,7 +17,9 @@ export type Speech = {
 /** Text to speech with character timings (used later for captions). */
 /** The JSON body sent to ElevenLabs. Exported so it can be unit tested. */
 export function speechBody(text: string, delivery: Delivery = DEFAULT_DELIVERY, model = MODEL) {
-  return { text, model_id: model, voice_settings: DELIVERIES[delivery].settings };
+  const settings = DELIVERIES[delivery].settings;
+  // Leaving voice_settings out makes ElevenLabs use the voice's own saved settings.
+  return settings ? { text, model_id: model, voice_settings: settings } : { text, model_id: model };
 }
 
 export async function synthesize(text: string, voiceId: string, delivery: Delivery = DEFAULT_DELIVERY): Promise<Speech> {

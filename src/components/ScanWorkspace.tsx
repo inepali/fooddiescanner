@@ -617,6 +617,7 @@ export default function ScanWorkspace(props: StudioProps) {
           </label>
         </div>
         <p className="text-xs text-neutral-500">
+          {delivery === "original" && "As cloned: uses the settings saved on the voice in ElevenLabs, so it sounds the same as there."}
           {delivery === "natural" && "Natural: balanced and conversational."}
           {delivery === "expressive" && "Expressive: more emotion and emphasis; can sound dramatic."}
           {delivery === "steady" && "Steady: even and calm, with less variation."}
