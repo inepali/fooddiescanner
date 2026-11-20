@@ -103,16 +103,26 @@ test("narration joins every scene voiceover in order", () => {
 
 import { parseVoices } from "./elevenlabs.ts";
 
-test("parseVoices puts free default voices first and labels them", () => {
+test("parseVoices puts your own voices first, then defaults, then library voices", () => {
   const voices = parseVoices({
     voices: [
       { voice_id: "b", name: "Zed", category: "professional", labels: { accent: "british" } },
       { voice_id: "a", name: "Sarah", category: "premade", labels: { gender: "female", accent: "american" } },
+      { voice_id: "c", name: "Sanjay", category: "cloned", labels: {} },
+      { voice_id: "d", name: "My Pro", category: "professional", is_owner: true },
       { name: "no id" },
     ],
   });
-  assert.deepEqual(voices.map((v) => [v.name, v.free]), [["Sarah", true], ["Zed", false]]);
-  assert.equal(voices[0].description, "female, american");
+  assert.deepEqual(
+    voices.map((v) => [v.name, v.group, v.free]),
+    [
+      ["My Pro", "mine", true],
+      ["Sanjay", "mine", true],
+      ["Sarah", "default", true],
+      ["Zed", "library", false],
+    ],
+  );
+  assert.equal(voices[2].description, "female, american");
   assert.deepEqual(parseVoices(null), []);
 });
 

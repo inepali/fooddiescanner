@@ -1,6 +1,9 @@
 import type { Alignment } from "./captions.ts";
 import { DELIVERIES, DEFAULT_DELIVERY, type Delivery } from "./delivery.ts";
 import { isMock, mockAlignment, silentWav, speechSeconds } from "./mock.ts";
+import type { VoiceGroup } from "./voice-groups.ts";
+
+export { VOICE_GROUP_LABELS, type VoiceGroup } from "./voice-groups.ts";
 
 const MODEL = process.env.ELEVENLABS_MODEL ?? "eleven_multilingual_v2";
 
@@ -68,12 +71,26 @@ export type Voice = {
   id: string;
   name: string;
   category: string;
-  /** Default ("premade") voices work on every plan, including free. */
+  /** Your own clones/designs, ElevenLabs' default voices, or voices added from the Voice Library. */
+  group: VoiceGroup;
+  /** False only for Voice Library voices, which need a paid plan over the API. */
   free: boolean;
   description: string | null;
 };
 
-/** Maps ElevenLabs' /v1/voices response, default voices first. */
+const GROUP_ORDER: Record<VoiceGroup, number> = { mine: 0, default: 1, library: 2 };
+
+/** Which bucket a voice from /v1/voices belongs in. */
+export function voiceGroup(category: string, isOwner: unknown): VoiceGroup {
+  if (category === "premade") return "default";
+  // Instant clones and Voice Design voices are always made in your own account.
+  if ((category === "cloned" || category === "generated") && isOwner !== false) return "mine";
+  // Professional clones are yours only if you own them; otherwise they were added from the library.
+  if (category === "professional" && isOwner === true) return "mine";
+  return "library";
+}
+
+/** Maps ElevenLabs' /v1/voices response: your voices first, then defaults, then library voices. */
 export function parseVoices(data: unknown): Voice[] {
   const list = (typeof data === "object" && data !== null ? (data as { voices?: unknown }).voices : null) ?? [];
   const voices: Voice[] = [];
@@ -86,15 +103,17 @@ export function parseVoices(data: unknown): Voice[] {
     const bits = [labels.gender, labels.age, labels.accent, labels.use_case ?? labels.descriptive]
       .filter((x): x is string => typeof x === "string" && x.length > 0)
       .join(", ");
+    const group = voiceGroup(category, o.is_owner);
     voices.push({
       id: o.voice_id,
       name: o.name,
       category,
-      free: category === "premade",
+      group,
+      free: group !== "library",
       description: bits || null,
     });
   }
-  return voices.sort((a, b) => Number(b.free) - Number(a.free) || a.name.localeCompare(b.name));
+  return voices.sort((a, b) => GROUP_ORDER[a.group] - GROUP_ORDER[b.group] || a.name.localeCompare(b.name));
 }
 
 export class VoicesPermissionError extends Error {
@@ -108,7 +127,7 @@ export class VoicesPermissionError extends Error {
 /** Voices in your ElevenLabs account. */
 export async function listVoices(): Promise<Voice[]> {
   if (isMock()) {
-    return [{ id: "mock-voice", name: "Mock voice (silent)", category: "premade", free: true, description: null }];
+    return [{ id: "mock-voice", name: "Mock voice (silent)", category: "premade", group: "default", free: true, description: null }];
   }
   const key = process.env.ELEVENLABS_API_KEY;
   if (!key) throw new Error("ELEVENLABS_API_KEY is not set");

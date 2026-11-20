@@ -16,7 +16,12 @@ export const GET = handler(async () => {
     if (err instanceof VoicesPermissionError) return json({ voices: [], selected: preferred, warning: err.message });
     throw err;
   }
-  // Fall back to the first free voice if the saved one isn't in this account.
-  const selected = voices.find((v) => v.id === preferred)?.id ?? voices.find((v) => v.free)?.id ?? voices[0]?.id ?? "";
+  // Fall back to your own voice, then a free default, if the saved one isn't in this account.
+  const selected =
+    voices.find((v) => v.id === preferred)?.id ??
+    voices.find((v) => v.group === "mine")?.id ??
+    voices.find((v) => v.free)?.id ??
+    voices[0]?.id ??
+    "";
   return json({ voices, selected });
 });
