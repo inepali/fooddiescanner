@@ -46,7 +46,7 @@ export default async function ReviewPage({ searchParams }: Props) {
   const [{ data: media }, { data: creators }, { count: pendingCount }] = await Promise.all([
     ids.length
       ? db.from("scan_media").select("scan_id, kind, storage_path, duration_s, sort_order").in("scan_id", ids).in("kind", ["label", "product_image", "product_video"]).order("sort_order")
-      : Promise.resolve({ data: [] as { scan_id: string; kind: string; storage_path: string; duration_s: number | null }[] }),
+      : Promise.resolve({ data: [] as { scan_id: string; kind: string; storage_path: string; duration_s: number | null; sort_order: number | null }[] }),
     creatorIds.length
       ? db.from("creators").select("id, handle, tiktok_handle, tier").in("id", creatorIds)
       : Promise.resolve({ data: [] as { id: string; handle: string | null; tiktok_handle: string | null; tier: string }[] }),
