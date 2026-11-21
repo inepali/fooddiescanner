@@ -13,7 +13,7 @@ export default function Privacy() {
   return (
     <LegalPage title="Privacy Policy">
       <p>
-        This policy explains what information Fooddie Scanner (fooddiescanner.com, run from Charlotte, North Carolina) collects, how we use
+        This policy explains what information Fooddie Scanner (fooddiescanner.com, run from York County, South Carolina) collects, how we use
         it and the choices you have. In short: we collect only what we need to run the library and the contributor program, we don&apos;t
         sell your information, and we don&apos;t use advertising cookies.
       </p>

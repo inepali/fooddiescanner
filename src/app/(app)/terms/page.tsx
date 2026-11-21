@@ -15,7 +15,7 @@ export default function Terms() {
       <p>
         These terms cover your use of fooddiescanner.com, its public library of food label breakdowns, member accounts, the contributor
         rewards program and the Fooddie Scanner videos on TikTok, Instagram and YouTube (together, the &quot;service&quot;). Fooddie Scanner
-        is run from Charlotte, North Carolina (&quot;we&quot;, &quot;us&quot;). By using the service you agree to these terms. If you don&apos;t
+        is run from York County, South Carolina (&quot;we&quot;, &quot;us&quot;). By using the service you agree to these terms. If you don&apos;t
         agree, please don&apos;t use it.
       </p>
 
@@ -143,8 +143,8 @@ export default function Terms() {
       <h2>14. Disputes</h2>
       <p>
         If you have a problem with the service, please email us first so we can try to fix it informally. These terms are governed by the
-        laws of North Carolina, without regard to its conflict-of-law rules. Any dispute that we can&apos;t resolve informally will be heard
-        in the state or federal courts located in Mecklenburg County, North Carolina.
+        laws of South Carolina, without regard to its conflict-of-law rules. Any dispute that we can&apos;t resolve informally will be heard
+        in the state courts located in York County, South Carolina, or the federal court for the District of South Carolina.
       </p>
 
       <h2>15. Changes and contact</h2>
