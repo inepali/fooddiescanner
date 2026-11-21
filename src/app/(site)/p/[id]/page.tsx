@@ -4,7 +4,10 @@ import { supabase } from "@/lib/supabase";
 import { bandFor, type Band } from "@/lib/scoring";
 import type { OffSummary } from "@/lib/openfoodfacts";
 import Link from "next/link";
+import Image from "next/image";
 import ScoreRing from "@/components/ScoreRing";
+import OffGrades from "@/components/site/OffGrades";
+import { coverImagePath, pickCoverRow } from "@/lib/media";
 
 // Cached and rebuilt at most every 10 minutes, so crawlers and shared links don't re-render it on every visit.
 // Renaming, unpublishing or deleting a scan refreshes it right away (revalidatePath in /api/scans/[id]).
@@ -42,7 +45,20 @@ async function load(id: string) {
     .select("position, raw_name, score, reason")
     .eq("scan_id", id)
     .order("position");
-  return { scan, ingredients: (ings ?? []) as Ing[] };
+  const { data: media } = await db
+    .from("scan_media")
+    .select("id, kind, storage_path, sort_order")
+    .eq("scan_id", id)
+    .in("kind", ["product_image", "label"]);
+  const rows = (media ?? []) as { id: string; kind: string; storage_path: string; sort_order: number }[];
+  // The card photo first (first product photo, else the label), then any other product photos.
+  const cover = pickCoverRow(rows);
+  const extra = rows
+    .filter((m) => m.kind === "product_image" && m.id !== cover?.id)
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .slice(0, 4);
+  const photos = [cover, ...extra].filter((m): m is (typeof rows)[number] => !!m).map((m) => coverImagePath(m.id));
+  return { scan, ingredients: (ings ?? []) as Ing[], photos };
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -53,14 +69,19 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     title: `${name}: ${data.scan.overall_score}/100 ingredient score`,
     description: `Ingredient-by-ingredient health breakdown for ${name}.`,
     alternates: { canonical: `/p/${data.scan.id}` },
-    openGraph: { title: `${name}: ${data.scan.overall_score}/100`, description: `Ingredient-by-ingredient health breakdown for ${name}.`, type: "article" },
+    openGraph: {
+      title: `${name}: ${data.scan.overall_score}/100`,
+      description: `Ingredient-by-ingredient health breakdown for ${name}.`,
+      type: "article",
+      ...(data.photos[0] ? { images: [{ url: data.photos[0], alt: name }] } : {}),
+    },
   };
 }
 
 export default async function PublicScanPage({ params }: { params: Promise<{ id: string }> }) {
   const data = await load((await params).id);
   if (!data) notFound();
-  const { scan, ingredients } = data;
+  const { scan, ingredients, photos } = data;
   const score = scan.overall_score as number;
   const band = bandFor(score);
   const allergens: string[] = scan.allergens ?? [];
@@ -71,31 +92,53 @@ export default async function PublicScanPage({ params }: { params: Promise<{ id:
       <Link href="/search" className="inline-flex min-h-11 items-center text-[15px] font-semibold text-[#1E6B45]">
         ← Back to the library
       </Link>
-      <header className="flex items-center gap-6">
-        <ScoreRing score={score} />
-        <div className="space-y-1">
-          <h1 className="font-display text-3xl font-extrabold tracking-tight">{scan.product_name ?? "Scanned product"}</h1>
-          <p className="text-neutral-600">
-            Overall: <strong>{LABEL[band]}</strong> ({score}/100)
-          </p>
-          {allergens.length > 0 && <p className="text-sm text-neutral-500">Contains: {allergens.join(", ")}</p>}
+      <header className="overflow-hidden rounded-3xl border border-[#E2E6DE] bg-white shadow-sm">
+        {photos[0] && (
+          <div className="relative bg-gradient-to-b from-[#F6F7F2] to-[#EEF1EA]">
+            <Image
+              src={photos[0]}
+              alt={scan.product_name ?? "Product photo"}
+              width={800}
+              height={600}
+              sizes="(min-width: 672px) 672px, 100vw"
+              priority
+              className="mx-auto h-72 w-full object-contain p-4 sm:h-80"
+            />
+            <span className={`absolute right-4 top-4 rounded-full px-3 py-1 text-sm font-bold text-white shadow ${BAR[band]}`}>
+              {LABEL[band]}
+            </span>
+          </div>
+        )}
+        {photos.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto px-4 pt-3">
+            {photos.slice(1).map((src) => (
+              <Image
+                key={src}
+                src={src}
+                alt=""
+                width={64}
+                height={64}
+                sizes="64px"
+                className="h-16 w-16 shrink-0 rounded-xl border border-[#E2E6DE] bg-[#F6F7F2] object-cover"
+              />
+            ))}
+          </div>
+        )}
+        <div className="flex items-center gap-5 p-5">
+          <ScoreRing score={score} className="h-24 w-24 sm:h-28 sm:w-28" />
+          <div className="min-w-0 space-y-1">
+            <h1 className="font-display text-2xl font-extrabold leading-tight tracking-tight [overflow-wrap:anywhere] sm:text-3xl">
+              {scan.product_name ?? "Scanned product"}
+            </h1>
+            <p className="text-neutral-600">
+              Overall: <strong>{LABEL[band]}</strong> ({score}/100) · {ingredients.length} {ingredients.length === 1 ? "ingredient" : "ingredients"}
+            </p>
+            {allergens.length > 0 && <p className="text-sm text-neutral-500">Contains: {allergens.join(", ")}</p>}
+          </div>
         </div>
       </header>
 
-      {off && (off.nutriscore || off.nova || off.green) && (
-        <section className="space-y-1 rounded-2xl bg-white p-4 text-sm">
-          <p className="font-medium">Also checked against Open Food Facts</p>
-          <p className="text-neutral-600">
-            {[
-              off.nutriscore ? `Nutri-Score ${off.nutriscore.toUpperCase()}` : null,
-              off.nova ? `NOVA ${off.nova}` : null,
-              off.green ? `Green-Score ${off.green.replace("-plus", "+").toUpperCase()}` : null,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
-        </section>
-      )}
+      {off && <OffGrades off={off} />}
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Ingredients, in label order</h2>
