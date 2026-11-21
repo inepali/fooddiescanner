@@ -79,17 +79,11 @@ export function pickCandidates(ings: ScriptInput["ingredients"]): Record<Group, 
   const withGroup = (r: (typeof rows)[number]) => ({ ...toCand(r), group: r.group });
   const bestSorted = [...ranked].sort((a, b) => b.score - a.score || a.position - b.position);
   const worstSorted = [...ranked].sort((a, b) => a.score - b.score || a.position - b.position);
-  // Up to five each, but never the same ingredient in both lists: a short label is split
-  // in half, and an odd one in the middle goes wherever its group says it belongs.
-  const k = Math.min(LIST_SIZE, Math.floor(ranked.length / 2));
-  const bestRows = bestSorted.slice(0, k);
-  const worstRows = worstSorted.slice(0, k);
-  if (ranked.length < LIST_SIZE * 2 && ranked.length % 2 === 1) {
-    const middle = ranked.find((r) => !bestRows.includes(r) && !worstRows.includes(r));
-    if (middle) (middle.group === "good" ? bestRows : worstRows).push(middle);
-  }
-  const best = bestRows.map(withGroup);
-  const worst = worstRows.map(withGroup);
+  // Up to five each, and only ingredients that really belong there: "best" is only good
+  // (green) ingredients, "worst" is only fair or poor ones. So a clean label can have
+  // zero worst, a junky one zero best, and no ingredient is ever in both lists.
+  const best = bestSorted.filter((r) => r.group === "good").slice(0, LIST_SIZE).map(withGroup);
+  const worst = worstSorted.filter((r) => r.group !== "good").slice(0, LIST_SIZE).map(withGroup);
 
   return {
     best,
@@ -140,8 +134,9 @@ export function buildPrompt(i: ScriptInput, compact = false) {
   const best = nb === 1 ? "the best ingredient" : `the ${B} best ingredients`;
   const worst = nw === 1 ? "the worst ingredient" : `the ${W} worst ingredients`;
   const short = nb < LIST_SIZE || nw < LIST_SIZE;
+  const fewIngredients = nb + nw <= 4;
   const shortNote = short
-    ? `\nSHORT LABEL: only ${nb + nw} ingredient${nb + nw === 1 ? "" : "s"} on this label ${nb + nw === 1 ? "is" : "are"} worth talking about, so this video covers ${nb === 0 ? "no best" : best} and ${nw === 0 ? "no worst" : worst}, NOT five and five. Before writing, count the ingredients in the two lists below and use exactly those numbers everywhere (hook, teasers, transitions). Never say "five" or any other count that does not match the lists. Each ingredient appears in only one of the two lists: never call the same ingredient both good and bad. With so few ingredients, spend more time on each one (what it is, why it is in there, where it sits on the label) to fill the minute${nb + nw <= 3 ? ', and say that a short ingredient list is itself worth noticing' : ""}.\n`
+    ? `\nCOUNTS FOR THIS LABEL: this video covers ${nb === 0 ? "NO best ingredients" : best} and ${nw === 0 ? "NO worst ingredients" : worst}, NOT five and five. ${nw === 0 ? "Nothing on this label is fair or poor, so there is nothing to warn about: never say \"worst\", \"worse\" or \"I'd worry about\", and never invent a concern. " : ""}${nb === 0 ? "Nothing on this label is on the good side: never invent a benefit. " : ""}Use exactly these numbers everywhere (hook, teasers, transitions, countdown). Never say "five" or any other count that does not match the two lists below, and never call the same ingredient both good and bad.${fewIngredients ? ` With so few ingredients to cover, spend more time on each one (what it is, why it is in there, where it sits on the label) to fill the minute${i.ingredients.length <= 3 ? ", and say that a short ingredient list is itself worth noticing" : ""}.` : ""}\n`
     : "";
   const bestHeader = nb === 0 ? "THE BEST ingredients" : nb === 1 ? "THE BEST ingredient" : `THE ${B.toUpperCase()} BEST ingredients`;
   const worstHeader = nw === 0 ? "THE WORST ingredients" : nw === 1 ? "THE WORST ingredient" : `THE ${W.toUpperCase()} WORST ingredients`;
@@ -187,7 +182,7 @@ Return ONLY a JSON object (no markdown fences) shaped like:
 STORY PLAN: "${nb === 0 ? "no best" : best} first, ${nw === 0 ? "no worst" : worst} last". ${nb === 0 ? "" : `Name ${best} first`}${nb > 0 && nw > 0 ? `, then ask viewers to stay until you reveal ${worst}.` : nw > 0 ? `Reveal ${worst}.` : "."} ${
     concerning
       ? "VERDICT FOR THIS PRODUCT: it falls on the concerning side. Say plainly, near the end, that taken together these ingredients may not be a healthy choice and that the worst ones may be harmful for regular consumption. Use \"may\" and \"can\", never state a medical fact the facts above do not support, and never call the product poison."
-      : `VERDICT FOR THIS PRODUCT: it is mostly good. Say so honestly, and let ${nb === 0 ? "the good news" : best} get a little more time. Then, for the worse ingredients, give extra detail: only list as \"worse\" the ones marked [fair] or [poor] (skip any marked [good]; name only as many as there really are, and if there are none, say so with relief). For each worse one, say what it is, why it is there, and the specific health concern, in two short sentences instead of one.`
+      : `VERDICT FOR THIS PRODUCT: it is mostly good. Say so honestly, and let ${nb === 0 ? "the good news" : best} get a little more time.${nw === 0 ? " There is nothing to warn about on this label, so say that with relief and give the good ingredients the full minute." : " Then, for the worst ingredients listed above (all of them are fair or poor), give extra detail: for each one, say what it is, why it is there, and the specific health concern, in two short sentences instead of one."}`
   }
 
 STRUCTURE (in this order, 7 to 9 scenes, "seconds" adding up to about 60; the retention hooks below are woven into these scenes, they are not extra scenes):
@@ -281,8 +276,32 @@ export function ensureHook(script: VideoScript): VideoScript {
   return { ...script, scenes };
 }
 
+const COUNT_WORDS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+
+/**
+ * Catches a script that says a count the label doesn't have, such as "the five worst"
+ * when there are two, or any "worst" talk when nothing is fair or poor. Returns what is
+ * wrong, or null when the counts match.
+ */
+export function wrongCount(script: VideoScript, best: number, worst: number): string | null {
+  const text = narration(script).toLowerCase();
+  const said = (kind: "best" | "worst") => {
+    const words = kind === "best" ? "best|healthiest" : "worst|worse";
+    const re = new RegExp(`\\b(one|two|three|four|five|six|seven|eight|nine|ten|\\d+)\\s+(?:(?:${words})\\b|(?:ingredients?|things?)\\s+(?:i'?d|to)\\s+worry)`, "g");
+    return [...text.matchAll(re)].map((m) => COUNT_WORDS[m[1]] ?? Number(m[1]));
+  };
+  const badBest = said("best").find((n) => n !== best);
+  if (badBest !== undefined) return `it says ${badBest} best, but there ${best === 1 ? "is" : "are"} ${best === 0 ? "none" : best}.`;
+  const badWorst = said("worst").find((n) => n !== worst);
+  if (badWorst !== undefined) return `it says ${badWorst} worst, but there ${worst === 1 ? "is" : "are"} ${worst === 0 ? "none" : worst}.`;
+  if (worst === 0 && /\b(the worst|worst ones?|i'?d worry about)\b/.test(text)) return "it talks about worst ingredients, but nothing on this label is fair or poor.";
+  return null;
+}
+
 export async function createScript(input: ScriptInput): Promise<VideoScript> {
   const base = buildPrompt(input);
+  const picked = pickCandidates(input.ingredients);
+  const counts = { best: picked.best.length, worst: picked.worst.length };
   let prompt = base;
   let compactPrompt = false;
   let photos = input.photos ?? [];
@@ -313,7 +332,14 @@ export async function createScript(input: ScriptInput): Promise<VideoScript> {
       continue;
     }
     const words = wordCount(script);
-    if (words >= MIN_WORDS && words <= MAX_WORDS) return script;
+    const countError = wrongCount(script, counts.best, counts.worst);
+    if (!countError && words >= MIN_WORDS && words <= MAX_WORDS) return script;
+    if (countError && attempt === 2 && !best) return script; // never fail the whole step over wording
+    if (countError) {
+      // A wrong count ("the five worst" with two on the label) is worse than a slightly long script: retry with the fix.
+      prompt = `${compactPrompt ? buildPrompt(input, true) : base}\n\nYour previous draft was wrong: ${countError} Rewrite it with the real counts.`;
+      continue;
+    }
     // Keep the draft closest to a minute in case no retry lands in range.
     if (!best || Math.abs(words - 145) < Math.abs(wordCount(best) - 145)) best = script;
     prompt = `${compactPrompt ? buildPrompt(input, true) : base}
