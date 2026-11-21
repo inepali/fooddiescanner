@@ -172,11 +172,15 @@ export default async function PublicScanPage({ params }: { params: Promise<{ id:
         </p>
         {off && (
           <p>
-            Product data from{" "}
+            Nutri-Score, NOVA, Green-Score and nutrition figures come from{" "}
             <a className="underline" href={off.url} target="_blank" rel="noreferrer">
               Open Food Facts
-            </a>{" "}
-            (ODbL).
+            </a>
+            , a free, open community database, under the{" "}
+            <a className="underline" href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noreferrer">
+              Open Database License
+            </a>
+            . Fooddie Scanner doesn’t issue these grades and can’t guarantee they’re accurate or current.
           </p>
         )}
       </footer>

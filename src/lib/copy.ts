@@ -5,9 +5,9 @@ import { generateText } from "./llm.ts";
 export type SocialCopy = { title: string; description: string; hashtags: string[] };
 export type CopyResult = { tiktok: SocialCopy; instagram: SocialCopy; youtube: SocialCopy };
 
-export const AI_NOTE = "Not medical advice.";
+export const AI_NOTE = "Our opinion of the ingredient list, for information only. Not medical advice.";
 export const CTA = "Do you eat this? Tell me in the comments.";
-export const OFF_CREDIT = "Product data: Open Food Facts";
+export const OFF_CREDIT = "Grades and nutrition data: Open Food Facts (ODbL)";
 
 export type CopyInput = {
   productName: string | null;
