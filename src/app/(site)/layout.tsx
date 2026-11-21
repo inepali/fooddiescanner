@@ -25,7 +25,9 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           <Link href="/#recent" className="text-[#14201A] hover:text-[#1E6B45]">Browse scans</Link>
           <Link href="/#scoring" className="text-[#14201A] hover:text-[#1E6B45]">How scoring works</Link>
           <Link href="/#ingredients" className="text-[#14201A] hover:text-[#1E6B45]">Ingredients</Link>
+          <Link href="/#contribute" className="text-[#14201A] hover:text-[#1E6B45]">Contribute</Link>
           <Link href="/#faq" className="text-[#14201A] hover:text-[#1E6B45]">FAQ</Link>
+          <Link href="/#contact" className="text-[#14201A] hover:text-[#1E6B45]">Contact</Link>
         </nav>
         <MemberButton />
       </header>
@@ -48,6 +50,8 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
             <nav aria-label="About" className="flex flex-col gap-2.5 text-[15px]">
               <span className="font-bold text-white">About</span>
               <Link href="/#methodology" className="text-[#C9D3CB] hover:text-white">Methodology</Link>
+              <Link href="/#contribute" className="text-[#C9D3CB] hover:text-white">Become a contributor</Link>
+              <Link href="/#contact" className="text-[#C9D3CB] hover:text-white">Contact</Link>
               <Link href="/privacy" className="text-[#C9D3CB] hover:text-white">Privacy</Link>
               <Link href="/terms" className="text-[#C9D3CB] hover:text-white">Terms</Link>
             </nav>
