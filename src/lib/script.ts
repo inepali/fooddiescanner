@@ -165,7 +165,7 @@ export function buildPrompt(i: ScriptInput, compact = false) {
   const poorStep =
     nw === 0
       ? `3. "poor": skip this section. Nothing on this label needs a warning: say so with relief in the outro instead of inventing a concern.`
-      : `3. "poor" (${nw <= 2 ? "1 or 2 scenes" : "2 or 3 scenes"}): ${worst.toUpperCase()}${nw > 1 ? `, saving the very worst for last (count down from number ${nw} to the worst)` : ""}. Explain the specific concern for your health for each in plain words (for example added sugar, a refined oil, a heavily processed additive) and why it matters. Say "may" where the science is not settled.`;
+      : `3. "poor" (${nw <= 2 ? "1 or 2 scenes" : "2 or 3 scenes"}): ${worst.toUpperCase()}${nw > 1 ? `, saving the very worst for last (count down from number ${nw} to the worst)` : ""}. For each, explain in plain words the widely discussed nutrition concern about that ingredient (for example added sugar, a refined oil, a heavily processed additive) and why people pay attention to it. Say "may" where the science is not settled. Talk about the ingredient, never the company.`;
 
   const recent = (i.recentScans ?? []).slice(0, 15);
   const recentLine = recent.length
@@ -211,7 +211,7 @@ ${
 
 STORY PLAN: "${nb === 0 ? "no best" : best} first, ${nw === 0 ? "no worst" : worst} last". ${nb === 0 ? "" : `Name ${best} first`}${nb > 0 && nw > 0 ? `, then ask viewers to stay until you reveal ${worst}.` : nw > 0 ? `Reveal ${worst}.` : "."} ${
     concerning
-      ? "VERDICT FOR THIS PRODUCT: it falls on the concerning side. Say plainly, near the end, that taken together these ingredients may not be a healthy choice and that the worst ones may be harmful for regular consumption. Use \"may\" and \"can\", never state a medical fact the facts above do not support, and never call the product poison."
+      ? "VERDICT FOR THIS PRODUCT: it lands on the lower side of the ingredient scale. Say plainly, near the end, that in your view this ingredient list lands on the lower side and may be one to enjoy now and then rather than every day. Frame it as your opinion of the label (\"in my book\", \"for me\"), use \"may\" and \"can\", never state a medical fact the facts above do not support, and never call the product or any ingredient unsafe, harmful, toxic or poison."
       : `VERDICT FOR THIS PRODUCT: it is mostly good. Say so honestly, and let ${nb === 0 ? "the good news" : best} get a little more time.${nw === 0 ? " There is nothing to warn about on this label, so say that with relief and give the good ingredients the full minute." : " Then, for the worst ingredients listed above (all of them are fair or poor), give extra detail: for each one, say what it is, why it is there, and the specific health concern, in two short sentences instead of one."}`
   }
 
@@ -228,7 +228,7 @@ KEEP PEOPLE WATCHING (retention hooks). Viewers tend to drop off around 10-15 se
 - Closing hook: end the "outro" with the takeaway, the "Try this instead" tip, tomorrow's teaser with "Follow so you don't miss it.", the final question and the comment call to action from rule 4.
 Pay each teaser off within the next 10-20 seconds. A teaser must never promise something the video does not deliver, and must not be clickbait, a scare tactic or a numeric score. Plan the scene lengths so a scene boundary lands near 0:15 and near 0:35.
 MAKE IT WORTH WATCHING AND SHARING (story craft). Treat the label like a short mystery with a reveal, not a list:
-- Hook formats that work (pick the one that fits the facts, never invent a claim): (a) contradiction, "It says 'natural'. The label says something else."; (b) a question people want answered, "What's the first thing on this label? Not what you think."; (c) a challenge, "Guess which ingredient shows up second."; (d) stakes, "Think twice before this goes in your cart." Open with the most surprising TRUE thing about this label, not with "Hey guys" or "Today I'm looking at".
+- Hook formats that work (pick the one that fits the facts, never invent a claim): (a) contradiction, "The front says 'natural'. Let's read the back."; (b) a question people want answered, "What's the first thing on this label? Not what you think."; (c) a challenge, "Guess which ingredient shows up second."; (d) stakes, "Read this before it goes in your cart." Open with the most surprising TRUE thing about this label, not with "Hey guys" or "Today I'm looking at".
 - Plain words beat jargon: if you name a rating such as Nutri-Score or NOVA group, say what it means right after in everyday words ("NOVA group 4. That means ultra-processed."). E-numbers and chemical names get a plain-words nickname ("a flavor booster called E621").
 - Use label order as drama: ingredients are listed from most to least, so where an ingredient sits is a real, checkable fact ("Sugar is number two. Ingredients are listed by amount, so that's a lot.").
 - One vivid comparison per video, qualitative only ("reads more like a dessert recipe than breakfast"). No made-up numbers, statistics or studies.
@@ -253,7 +253,10 @@ RULES
 - LENGTH IS A HARD LIMIT: the whole video is about 1 minute. Total narration across all scenes must be between ${MIN_WORDS} and ${MAX_WORDS} words (aim for about 145), and "seconds" must add up to 55-62. Be concise: short sentences, no filler, no repeating yourself. The retention hooks and the closing question count toward this total.
 - Only talk about ingredients listed above. Do not invent ingredients, numbers or studies.
 - Health statements must be widely accepted nutrition basics, phrased with "may", "can" or "tends to", and consistent with the note shown for that ingredient. If you are not sure a benefit or concern is well established, leave that ingredient out.
-- No disease claims, no "cures", "treats", "prevents", "detox" or weight-loss promises, and no scare tactics. Do not shame people for eating it.`;
+- No disease claims, no "cures", "treats", "prevents", "detox" or weight-loss promises, and no scare tactics. Do not shame people for eating it.
+- OPINION, NOT FACT: the verdict and every "best" or "worst" call is your opinion of the ingredient list ("I'd", "in my book", "by my read"), not a fact about the product. Never say or suggest a product is unsafe, dangerous, harmful, toxic, illegal, banned, contaminated or mislabeled.
+- TALK ABOUT INGREDIENTS, NOT THE COMPANY: never say or suggest a brand is lying, misleading, hiding, tricking, cheating or doesn't care about people. Describe front-of-pack claims neutrally ("the front says 'natural'; here's the ingredient list") and let viewers decide.
+- Never tell viewers to stop buying, boycott or throw out a specific product. The "Try this instead" tip stays about label rules, never a brand.`;
 }
 
 export function parseScript(text: string): VideoScript {

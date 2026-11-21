@@ -157,7 +157,7 @@ test("prompt: groups and tone in, no numeric scores, ends on a question rule", (
   assert.match(p, /Upbeat, witty/);
   assert.match(p, /THE TWO BEST[^]*Whole grain oats[^]*THE FIVE WORST[^]*Red 40/); // 2 good; 5 of the fair/poor ones
   assert.match(p, /COUNTS FOR THIS LABEL/);
-  assert.match(p, /may be harmful for regular consumption/); // under 60: the concerning verdict
+  assert.match(p, /lands on the lower side/); // under 60: the lower-side verdict
   assert.doesNotMatch(p, /VERDICT FOR THIS PRODUCT: it is mostly good/);
   assert.match(p, /Do you eat this\?/);
   assert.match(p, /never say or show any numeric score/i);
@@ -173,7 +173,7 @@ test("prompt: empty group is shown as none", () => {
   assert.match(p, /skip this section/);
   assert.match(p, /NO worst ingredients/);
   assert.match(p, /nothing to warn about on this label/);
-  assert.doesNotMatch(p, /may be harmful for regular consumption/);
+  assert.doesNotMatch(p, /lands on the lower side/);
   const c = pickCandidates(ings);
   assert.deepEqual([c.best.length, c.worst.length], [2, 5]); // water skipped; best only good, worst only fair/poor
   assert.equal(c.worst[0].group, "poor");

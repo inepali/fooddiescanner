@@ -45,7 +45,7 @@ Field rules:
 - raw_name: the ingredient as printed, without percentages or parenthetical detail.
 - canonical_name: the plain lowercase common name (for example "cane sugar" for "Organic Evaporated Cane Juice").
 - provisional_score: 0-100 where 100 is healthiest. Guide: 80-100 whole or minimally processed foods (vegetables, legumes, whole grains, nuts, water); 60-79 lightly processed (olive oil, spices, vinegar, dairy); 40-59 refined or neutral (refined flour, salt, natural flavors); 20-39 added sugars, refined seed oils, many additives; 0-19 partially hydrogenated oils, some synthetic dyes and preservatives.
-- reason: one short factual sentence (max 20 words) about nutrition or processing. Do not make medical or disease claims.
+- reason: one short factual sentence (max 20 words) about the ingredient's nutrition or processing. Describe the ingredient, never the brand or product. Do not make medical or disease claims, and never use words like toxic, poison, dangerous, harmful, unsafe or banned.
 - allergens: allergens stated on the label (for example "milk", "wheat"), lowercase. Empty array if none.
 
 Rules: list sub-ingredients of compound ingredients as their own entries right after the parent's position, keeping label order. Never invent ingredients. Skip anything you cannot read.`;
