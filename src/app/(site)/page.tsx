@@ -4,6 +4,8 @@ import ScanCard from "@/components/site/ScanCard";
 import { supabase } from "@/lib/supabase";
 import { BAND_LABEL, BAND_STYLE, libraryStats, mostFlagged, orEmpty, recentScans } from "@/lib/library";
 import type { Band } from "@/lib/scoring";
+import { CONTACT_EMAIL } from "@/components/LegalPage";
+import { MAX_MEMBER_VIDEOS, POINTS, VIDEO_MAX_S, VIDEO_MIN_S } from "@/lib/member-scan";
 
 // Rebuilt at most every 5 minutes, so a scan you make public shows up shortly after.
 export const revalidate = 300;
@@ -41,6 +43,56 @@ const FAQ = [
     a: "Brands reformulate products and labels vary by region. Each breakdown is a snapshot of the package that was scanned.",
   },
   { q: "Is it free?", a: "Yes. Searching and reading every breakdown is free, with no account needed." },
+  {
+    q: "How do I become a contributor?",
+    a: "Contributors join by invite for now. If you have an invite code, sign up on the Join page. Otherwise, contact us and tell us a little about yourself and the stores you shop at.",
+  },
+  {
+    q: "When do I get my rewards?",
+    a: "Points are added when the team reviews and accepts your submission. Before rewards can be paid, confirm your email and add your phone number and TikTok handle on your account page.",
+  },
+];
+
+const fmt = (n: number) => n.toLocaleString("en-US");
+
+const ROLES = [
+  {
+    title: "Scanners",
+    who: "Anyone with a pantry or a grocery cart.",
+    steps: ["Photograph the ingredient label", "Add a clear photo of the product", "We score it and publish the breakdown"],
+    earn: [
+      [`${POINTS.scan}`, "points per accepted scan"],
+      [`+${POINTS.photo}`, "for a real product photo"],
+      [`+${POINTS.first_scan}`, "when you're first to scan a product"],
+    ],
+  },
+  {
+    title: "Video creators",
+    who: "Invited creators who like being on camera.",
+    steps: [
+      `Film about a minute on the product (${VIDEO_MIN_S}–${VIDEO_MAX_S} s)`,
+      `Upload or record in the app, up to ${MAX_MEMBER_VIDEOS} clips`,
+      "We add the voiceover and score, then post it",
+    ],
+    earn: [
+      [fmt(POINTS.video), "points per accepted video"],
+      [`+${POINTS.photo}`, "for the product photo"],
+    ],
+  },
+] as const;
+
+const PERKS = [
+  ["Earn rewards", "Every accepted scan and video earns points toward rewards."],
+  ["Get featured", "Accepted videos are posted to Fooddie Scanner's TikTok, Instagram and YouTube."],
+  ["Help other shoppers", "Your scan becomes a free, searchable breakdown anyone can read."],
+  ["Know your pantry", "See exactly what's in the food you already buy, ingredient by ingredient."],
+];
+
+const CONTACT = [
+  { label: "Email", value: CONTACT_EMAIL, href: `mailto:${CONTACT_EMAIL}` },
+  { label: "Phone", value: "+1 (704) 750-5858", href: "tel:+17047505858" },
+  { label: "Based in", value: "Charlotte, NC" },
+  { label: "Hours", value: "Monday – Friday, 7:00 AM – 7:00 PM ET" },
 ];
 
 const SOCIAL = [
@@ -238,6 +290,71 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* CONTRIBUTE */}
+      <section id="contribute" className={`${wrap} scroll-mt-6 flex flex-col gap-12 py-24`}>
+        <div className="max-w-3xl space-y-3">
+          <p className={eyebrow}>Become a contributor</p>
+          <h2 className={h2}>Scan your pantry. Join and earn rewards.</h2>
+          <p className="text-[17px] leading-relaxed text-[#3C4A42]">
+            The library grows because real shoppers scan the food they actually buy. Contributors send in labels and short videos, our team
+            reviews every submission, and accepted ones go live for everyone to read and watch.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          {ROLES.map((r) => (
+            <div key={r.title} className="flex flex-col gap-6 rounded-[24px] border border-[#E2E6DE] bg-white p-8">
+              <div className="space-y-1.5">
+                <h3 className="font-display text-3xl font-extrabold tracking-tight">{r.title}</h3>
+                <p className="text-base text-[#3C4A42]">{r.who}</p>
+              </div>
+              <ol className="space-y-2.5">
+                {r.steps.map((s, i) => (
+                  <li key={s} className="flex gap-3 text-base">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#E4EFE6] text-sm font-bold text-[#134A2F]">{i + 1}</span>
+                    <span className="pt-0.5">{s}</span>
+                  </li>
+                ))}
+              </ol>
+              <dl className="mt-auto flex flex-wrap gap-x-8 gap-y-4 rounded-2xl bg-[#F6F7F2] p-5">
+                {r.earn.map(([n, t]) => (
+                  <div key={t} className="flex flex-col-reverse">
+                    <dt className="text-sm text-[#3C4A42]">{t}</dt>
+                    <dd className="font-display text-2xl font-extrabold text-[#1E6B45]">{n}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          {PERKS.map(([title, text]) => (
+            <div key={title} className="space-y-2.5 border-t-[3px] border-[#1E6B45] pt-5">
+              <h3 className="text-xl font-bold">{title}</h3>
+              <p className="text-base leading-relaxed text-[#3C4A42]">{text}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-6 rounded-[24px] bg-[#F2B705] p-8 sm:p-10">
+          <div className="max-w-xl space-y-1.5">
+            <p className="font-display text-2xl font-extrabold text-[#14201A]">Joining is by invite for now.</p>
+            <p className="text-base text-[#14201A]">
+              Got a code? Sign up in a minute. No code yet? Get in touch and we’ll add you to the list. One submission per day keeps quality high.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/join" className="flex min-h-12 items-center rounded-full bg-[#14201A] px-6 font-bold text-white hover:bg-[#2F3D35]">
+              Join with a code
+            </Link>
+            <Link href="/#contact" className="flex min-h-12 items-center rounded-full border-2 border-[#14201A] px-6 font-bold text-[#14201A] hover:bg-white/40">
+              Request an invite
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* FOLLOW */}
       {SOCIAL.length > 0 && (
         <section className={`${wrap} py-24`}>
@@ -272,6 +389,35 @@ export default async function Home() {
               <p className="mt-3 text-base leading-relaxed text-[#3C4A42]">{f.a}</p>
             </details>
           ))}
+        </div>
+      </section>
+
+      {/* CONTACT */}
+      <section id="contact" className={`${wrap} scroll-mt-6 pb-24`}>
+        <div className="grid grid-cols-1 gap-10 rounded-[28px] bg-[#14201A] p-8 text-[#F6F7F2] sm:p-14 lg:grid-cols-[1fr_1.2fr]">
+          <div className="space-y-3">
+            <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#F2B705]">Contact</p>
+            <h2 className="font-display text-4xl font-extrabold leading-tight tracking-tight">Get in touch.</h2>
+            <p className="text-[17px] leading-relaxed text-[#C9D3CB]">
+              Questions about a breakdown, a correction for a label, an invite request or a partnership idea? We’d love to hear from you.
+            </p>
+          </div>
+          <dl className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            {CONTACT.map((c) => (
+              <div key={c.label} className="space-y-1">
+                <dt className="text-xs font-bold uppercase tracking-wider text-[#A9B5AD]">{c.label}</dt>
+                <dd className="break-words text-lg font-semibold text-white">
+                  {c.href ? (
+                    <a href={c.href} className="text-white hover:text-[#F2B705]">
+                      {c.value}
+                    </a>
+                  ) : (
+                    c.value
+                  )}
+                </dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
     </>
