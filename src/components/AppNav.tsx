@@ -26,7 +26,7 @@ export default function AppNav({ scanId }: { scanId?: string }) {
 
   const onNew = path === "/scan" || path.startsWith("/new");
   const onHistory = path.startsWith("/history");
-  const onReview = path.startsWith("/review") || path.startsWith("/invites");
+  const onReview = path.startsWith("/review") || path.startsWith("/invites") || path.startsWith("/contributors");
   const onProducts = path.startsWith("/products");
   const cls = (active: boolean) =>
     `${link} ${active ? "bg-accent font-medium text-white" : "text-neutral-600 hover:text-neutral-900 md:hover:bg-neutral-100"}`;
