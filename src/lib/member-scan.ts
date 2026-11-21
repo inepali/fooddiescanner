@@ -28,6 +28,29 @@ export function waitText(until: number, now = Date.now()): string {
   return mins >= 60 ? `in ${Math.ceil(mins / 60)} h` : `in ${mins} min`;
 }
 
+/** Up to this many clips per video submission; together they make the ~1 minute video. */
+export const MAX_MEMBER_VIDEOS = 5;
+/** Shortest clip worth keeping. */
+export const CLIP_MIN_S = 3;
+
+/** A problem with one clip's length, or null. Each clip may be short; the total is checked by videoTotalProblem. */
+export function clipLengthProblem(seconds: unknown): string | null {
+  const s = Number(seconds);
+  if (!Number.isFinite(s) || s <= 0) return "Couldn’t read the video’s length. Try another file.";
+  if (s < CLIP_MIN_S) return `That clip is under ${CLIP_MIN_S} s. Record a little longer.`;
+  if (s > VIDEO_MAX_S) return `That clip is ${Math.round(s)} s. Keep each clip to ${VIDEO_MAX_S} s or less.`;
+  return null;
+}
+
+/** All clips together must add up to about a minute (at least VIDEO_MIN_S). Null when fine. */
+export function videoTotalProblem(seconds: number[]): string | null {
+  if (seconds.length === 0) return "Add your video first.";
+  if (seconds.length > MAX_MEMBER_VIDEOS) return `Up to ${MAX_MEMBER_VIDEOS} clips.`;
+  const total = seconds.reduce((a, b) => a + (Number(b) || 0), 0);
+  if (total < VIDEO_MIN_S) return `Your clips add up to ${Math.round(total)} s. Make it about a minute (at least ${VIDEO_MIN_S} s in total).`;
+  return null;
+}
+
 /** A problem with the video's length, or null if it's fine. */
 export function videoLengthProblem(seconds: unknown): string | null {
   const s = Number(seconds);
@@ -63,7 +86,7 @@ export function formatPoints(n: number): string {
 export const PART_LABELS: Record<Part, string> = {
   label: "Ingredient label photo",
   product_image: "Product photo",
-  product_video: "Your 60-second video",
+  product_video: "Your video (one minute, up to 5 clips)",
 };
 
 const KIND_PARTS: Record<SubmissionKind, Part[]> = {

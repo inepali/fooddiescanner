@@ -5,7 +5,17 @@ import { BAND_LABEL, IngredientList, OffCrossCheck, type BreakdownIngredient } f
 import ScoreRing from "@/components/ScoreRing";
 import MemberBarcode from "@/components/site/MemberBarcode";
 import { downscale, readJson } from "@/lib/image";
-import { PART_POINTS, POINTS, VIDEO_MIN_S, formatPoints, submissionPoints, videoLengthProblem, type Part, type SubmissionKind } from "@/lib/member-scan";
+import {
+  MAX_MEMBER_VIDEOS,
+  PART_POINTS,
+  POINTS,
+  VIDEO_MIN_S,
+  clipLengthProblem,
+  formatPoints,
+  submissionPoints,
+  type Part,
+  type SubmissionKind,
+} from "@/lib/member-scan";
 import type { OffSummary } from "@/lib/openfoodfacts";
 import { bandFor } from "@/lib/scoring";
 
@@ -26,6 +36,7 @@ type State = {
   parts: { id: Part; label: string }[];
   photos: { kind: string; url: string }[];
   video: { duration_s: number | null } | null;
+  videos: { id: string; duration_s: number | null; url: string }[];
   missing: Part[];
   result: {
     ingredients: BreakdownIngredient[];
@@ -54,7 +65,10 @@ function readDuration(file: File): Promise<number> {
   });
 }
 
-export default function MemberScan({ kind = "scan" }: { kind?: SubmissionKind }) {
+/** A product the admin wants scanned next (shown to members so they know what to bring). */
+export type WantedProduct = { id: string; product: string; store: string };
+
+export default function MemberScan({ kind = "scan", wanted = [] }: { kind?: SubmissionKind; wanted?: WantedProduct[] }) {
   const page = kind === "video" ? "/me/video" : "/me/scan";
   const [id, setId] = useState<string | null>(null);
   const [productName, setProductName] = useState("");
@@ -115,32 +129,52 @@ export default function MemberScan({ kind = "scan" }: { kind?: SubmissionKind })
     });
   };
 
+  const [clipNote, setClipNote] = useState<string | null>(null);
+  /** Uploads one or more clips (recorded just now or picked from the phone), one after another. */
   const video = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const picked = Array.from(e.target.files ?? []);
     e.target.value = "";
-    if (!file || !id) return;
+    if (!picked.length || !id) return;
+    const room = MAX_MEMBER_VIDEOS - (state?.videos.length ?? 0);
+    const files = picked.slice(0, Math.max(0, room));
     run("product_video", async () => {
-      const duration = await readDuration(file);
-      const problem = videoLengthProblem(duration);
-      if (problem) throw new Error(problem);
-      const { key, uploadUrl, contentType } = await readJson<{ key: string; uploadUrl: string; contentType: string; error?: string }>(
-        await fetch(`/api/members/scans/${id}/video`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filename: file.name, contentType: file.type, size: file.size, duration }),
-        }),
-      );
-      const put = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": contentType }, body: file });
-      if (!put.ok) throw new Error("The video upload failed. Check your connection and try again.");
+      if (files.length === 0) throw new Error(`You already have ${MAX_MEMBER_VIDEOS} clips. Remove one to add another.`);
+      for (const [i, file] of files.entries()) {
+        setClipNote(files.length > 1 ? `Uploading clip ${i + 1} of ${files.length}…` : null);
+        const duration = await readDuration(file);
+        const problem = clipLengthProblem(duration);
+        if (problem) throw new Error(files.length > 1 ? `Clip ${i + 1}: ${problem}` : problem);
+        const { key, uploadUrl, contentType } = await readJson<{ key: string; uploadUrl: string; contentType: string; error?: string }>(
+          await fetch(`/api/members/scans/${id}/video`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filename: file.name || "recording.mp4", contentType: file.type, size: file.size, duration }),
+          }),
+        );
+        const put = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": contentType }, body: file });
+        if (!put.ok) throw new Error("The video upload failed. Check your connection and try again.");
+        await readJson(
+          await fetch(`/api/members/scans/${id}/video`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key, duration }),
+          }),
+        );
+      }
+      setClipNote(picked.length > files.length ? `Only ${MAX_MEMBER_VIDEOS} clips fit, so the extra ones were skipped.` : null);
+    });
+  };
+  const removeClip = (mediaId: string) =>
+    id &&
+    run(`del-${mediaId}`, async () => {
       await readJson(
         await fetch(`/api/members/scans/${id}/video`, {
-          method: "PUT",
+          method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key, duration }),
+          body: JSON.stringify({ media_id: mediaId }),
         }),
       );
     });
-  };
 
   const submit = () =>
     id &&
@@ -222,6 +256,9 @@ export default function MemberScan({ kind = "scan" }: { kind?: SubmissionKind })
   }
 
   const done = (p: Part) => !state.missing.includes(p);
+  const clips = state.videos ?? [];
+  const totalSeconds = clips.reduce((n, c) => n + (Number(c.duration_s) || 0), 0);
+  const shortVideo = kind === "video" && clips.length > 0 && totalSeconds < VIDEO_MIN_S;
   const thumb = (kind: string) => state.photos.find((x) => x.kind === kind)?.url;
 
   return (
@@ -234,6 +271,19 @@ export default function MemberScan({ kind = "scan" }: { kind?: SubmissionKind })
             : `Scan the barcode or snap the label, add a product photo, and earn ${submissionPoints("scan")} points (${POINTS.first_scan} more if you’re first to scan it). One scan every 24 hours.`}
         </p>
       </div>
+      {wanted.length > 0 && (
+        <div className="space-y-2 rounded-2xl bg-[#FFF4D6] p-4">
+          <p className="text-[13px] font-bold uppercase tracking-wide text-[#7A5200]">Wanted next</p>
+          <ul className="space-y-1 text-[15px]">
+            {wanted.map((w) => (
+              <li key={w.id}>
+                <span className="font-semibold">{w.product}</span>
+                <span className="text-[#5B6B60]"> · {w.store}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {id && (
         <MemberBarcode
           scanId={id}
@@ -265,30 +315,77 @@ export default function MemberScan({ kind = "scan" }: { kind?: SubmissionKind })
                     : "Flat, close and well lit, so we can read every word.")}
                 {p.id === "product_image" && "A real photo of the front of the package."}
                 {p.id === "product_video" &&
-                  (state.video?.duration_s
-                    ? `Uploaded (${Math.round(state.video.duration_s)} s)`
-                    : `About a minute (at least ${VIDEO_MIN_S} s): show the product and talk about it.`)}
+                  (clips.length
+                    ? `${clips.length} of ${MAX_MEMBER_VIDEOS} clips · ${Math.round(totalSeconds)} s${shortVideo ? ` (need ${VIDEO_MIN_S} s)` : ""}`
+                    : `About a minute in total (at least ${VIDEO_MIN_S} s), in up to ${MAX_MEMBER_VIDEOS} clips: show the product and talk about it.`)}
               </p>
             </div>
             {p.id !== "product_video" && thumb(p.id) && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={thumb(p.id)} alt="" className="h-12 w-12 rounded-lg object-cover" />
             )}
-            <label className="flex min-h-11 cursor-pointer items-center rounded-xl bg-[#F6F7F2] px-4 text-sm font-semibold text-[#1E6B45]">
-              {busy === p.id ? "Uploading…" : done(p.id) ? "Replace" : p.id === "product_video" ? "Add video" : "Take photo"}
-              <input
-                type="file"
-                className="sr-only"
-                disabled={busy !== null}
-                accept={p.id === "product_video" ? "video/mp4,video/quicktime,video/webm" : "image/*"}
-                capture={p.id === "product_video" ? undefined : "environment"}
-                onChange={p.id === "product_video" ? video : photo(p.id)}
-                aria-label={p.label}
-              />
-            </label>
+            {p.id !== "product_video" && (
+              <label className="flex min-h-11 cursor-pointer items-center rounded-xl bg-[#F6F7F2] px-4 text-sm font-semibold text-[#1E6B45]">
+                {busy === p.id ? "Uploading…" : done(p.id) ? "Replace" : "Take photo"}
+                <input
+                  type="file"
+                  className="sr-only"
+                  disabled={busy !== null}
+                  accept="image/*"
+                  capture="environment"
+                  onChange={photo(p.id)}
+                  aria-label={p.label}
+                />
+              </label>
+            )}
           </li>
         ))}
       </ol>
+      {kind === "video" && (
+        <div className="space-y-3 rounded-2xl border border-[#D8DED6] p-3">
+          {clips.length > 0 && (
+            <ul className="grid grid-cols-3 gap-2">
+              {clips.map((c, i) => (
+                <li key={c.id} className="space-y-1">
+                  <video src={c.url} muted playsInline preload="metadata" controls aria-label={`Clip ${i + 1}`} className="aspect-[9/16] w-full rounded-lg bg-black object-cover" />
+                  <div className="flex items-center justify-between text-[12px] text-[#5B6B60]">
+                    <span>
+                      {i + 1} · {c.duration_s ? `${Math.round(c.duration_s)} s` : "?"}
+                    </span>
+                    <button type="button" onClick={() => removeClip(c.id)} disabled={busy !== null} className="min-h-8 font-semibold text-red-700">
+                      {busy === `del-${c.id}` ? "…" : "Remove"}
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          {clips.length < MAX_MEMBER_VIDEOS ? (
+            <div className="grid grid-cols-2 gap-2">
+              <label className={`${btn} cursor-pointer bg-[#1E6B45] text-white ${busy !== null ? "opacity-50" : ""}`}>
+                {busy === "product_video" ? "Uploading…" : "🎥 Record"}
+                {/* Opens the phone's camera straight to video; the clip uploads as soon as you tap Use. */}
+                <input type="file" className="sr-only" disabled={busy !== null} accept="video/*" capture="environment" onChange={video} aria-label="Record a clip" />
+              </label>
+              <label className={`${btn} cursor-pointer bg-[#F6F7F2] text-[#1E6B45] ${busy !== null ? "opacity-50" : ""}`}>
+                Upload clips
+                <input
+                  type="file"
+                  className="sr-only"
+                  disabled={busy !== null}
+                  accept="video/mp4,video/quicktime,video/webm"
+                  multiple
+                  onChange={video}
+                  aria-label="Upload clips from your phone"
+                />
+              </label>
+            </div>
+          ) : (
+            <p className="text-[13px] text-[#5B6B60]">That’s the {MAX_MEMBER_VIDEOS}-clip limit. Remove one to add another.</p>
+          )}
+          {clipNote && <p className="text-[13px] text-[#5B6B60]">{clipNote}</p>}
+        </div>
+      )}
       {kind === "video" && (
         <label className="block space-y-1">
           <span className="font-semibold">Product name</span>
@@ -309,7 +406,7 @@ export default function MemberScan({ kind = "scan" }: { kind?: SubmissionKind })
       <button
         type="button"
         onClick={submit}
-        disabled={busy !== null || state.missing.length > 0 || (kind === "video" && productName.trim().length < 2)}
+        disabled={busy !== null || state.missing.length > 0 || shortVideo || (kind === "video" && productName.trim().length < 2)}
         className={`${btn} bg-[#1E6B45] text-white`}
       >
         {busy === "submit"

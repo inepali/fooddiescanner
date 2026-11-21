@@ -5,6 +5,7 @@ import AppNav from "./AppNav";
 import { useRouter } from "next/navigation";
 import { DEFAULT_DELIVERY, DELIVERIES, type Delivery } from "@/lib/delivery";
 import { withPublicLink } from "@/lib/public-link";
+import { SITE_URL } from "@/lib/site";
 import { REVEAL_CHOICES, type RevealChoice } from "@/lib/reveal";
 import { POSITIONS, type CustomLine, type LinePosition } from "@/lib/custom-lines";
 import { VOICE_GROUP_LABELS, type VoiceGroup } from "@/lib/voice-groups";
@@ -201,9 +202,7 @@ export default function ScanWorkspace(props: StudioProps) {
   }
   const [uploadPct, setUploadPct] = useState<number | null>(null);
   const [isPublic, setIsPublic] = useState(social.isPublic);
-  const [origin, setOrigin] = useState("");
-  const publicUrl = isPublic && origin ? `${origin}/p/${scanId}` : null;
-  useEffect(() => setOrigin(window.location.origin), []);
+  const publicUrl = isPublic ? `${SITE_URL}/p/${scanId}` : null;
   useEffect(() => setIsPublic(social.isPublic), [social.isPublic]);
 
   /** Sends videos straight to storage (they're too big to pass through the server), then adds them to the scan. */
@@ -1146,13 +1145,13 @@ export default function ScanWorkspace(props: StudioProps) {
               <a className="text-sm underline" href={`/p/${scanId}`} target="_blank" rel="noreferrer">
                 Open page
               </a>
-              <button className="rounded-xl bg-neutral-100 px-3 py-1 text-sm font-medium" onClick={() => copyText("link", `${origin}/p/${scanId}`)} aria-live="polite">
+              <button className="rounded-xl bg-neutral-100 px-3 py-1 text-sm font-medium" onClick={() => copyText("link", `${SITE_URL}/p/${scanId}`)} aria-live="polite">
                 {copied === "link" ? "Copied ✓" : "Copy link"}
               </button>
             </>
           )}
         </div>
-        {isPublic && <p className="break-all text-xs text-neutral-400">{origin}/p/{scanId}</p>}
+        {isPublic && <p className="break-all text-xs text-neutral-400">{SITE_URL}/p/{scanId}</p>}
         {isPublic && <p className="text-xs text-neutral-500">When you post from here, the link is added to the caption automatically.</p>}
       </section>
 

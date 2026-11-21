@@ -3,6 +3,7 @@ import { HttpError, handler, json, paramId } from "@/lib/http";
 import { getMedia, mediaUrl } from "@/lib/storage";
 import { liveToken, requireGuard } from "@/lib/social-accounts";
 import { withPublicLink } from "@/lib/public-link";
+import { SITE_URL } from "@/lib/site";
 import {
   TIKTOK_PRIVACY,
   YOUTUBE_PRIVACY,
@@ -51,7 +52,7 @@ export const POST = handler(async (req, ctx) => {
   if (!copy) throw new HttpError("Generate the social copy first.");
   // A public report page is linked right after the "not medical advice" line of the description.
   const { data: scan } = await db.from("scans").select("is_public").eq("id", id).maybeSingle();
-  const link = scan?.is_public ? `${(process.env.APP_URL || new URL(req.url).origin).replace(/\/$/, "")}/p/${id}` : null;
+  const link = scan?.is_public ? `${SITE_URL}/p/${id}` : null;
   const parts = {
     title: copy.title ?? "",
     description: withPublicLink(copy.description ?? "", link),

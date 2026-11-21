@@ -28,10 +28,13 @@ export async function writeSocialCopy(db: SupabaseClient, scanId: string): Promi
     .order("position");
 
   let scriptTitle: string | null = null;
+  let nextProduct: string | null = null;
   const video = await latestVideo(db, scanId);
   if (video?.script) {
     try {
-      scriptTitle = parseScript(video.script).title;
+      const script = parseScript(video.script);
+      scriptTitle = script.title;
+      nextProduct = script.next?.product ?? null;
     } catch {
       // unreadable script: copy is still fine without its title
     }
@@ -44,6 +47,7 @@ export async function writeSocialCopy(db: SupabaseClient, scanId: string): Promi
     productName: scan.product_name,
     overall: scan.overall_score,
     scriptTitle,
+    nextProduct,
     offFacts: offFactsLine(scan.off_data),
     ingredients: (ings ?? []).map((i) => ({ name: i.raw_name as string, score: (i.score as number | null) ?? 50 })),
   });

@@ -12,14 +12,18 @@ export const GET = memberHandler(async (_req, member, ctx) => {
   const db = supabase();
   const { data: media } = await db
     .from("scan_media")
-    .select("kind, storage_path, duration_s")
+    .select("id, kind, storage_path, duration_s, sort_order")
     .eq("scan_id", scan.id)
-    .in("kind", ["label", "product_image", "product_video"]);
+    .in("kind", ["label", "product_image", "product_video"])
+    .order("sort_order");
   const rows = media ?? [];
   const photos = await Promise.all(
     rows.filter((m) => m.kind !== "product_video").map(async (m) => ({ kind: m.kind, url: await mediaUrl("images", m.storage_path, 900) })),
   );
-  const video = rows.find((m) => m.kind === "product_video");
+  const clips = rows.filter((m) => m.kind === "product_video");
+  const videos = await Promise.all(
+    clips.map(async (m) => ({ id: m.id as string, duration_s: m.duration_s as number | null, url: await mediaUrl("videos", m.storage_path, 900) })),
+  );
 
   // Same breakdown the admin sees: every ingredient, the overall ring, allergens, Open Food Facts.
   let result: {
@@ -45,7 +49,8 @@ export const GET = memberHandler(async (_req, member, ctx) => {
   return json({
     scan,
     photos,
-    video: video ? { duration_s: video.duration_s } : null,
+    videos,
+    video: videos.length ? { duration_s: videos.reduce((n, v) => n + (Number(v.duration_s) || 0), 0) } : null,
     parts: partsFor(scan.kind),
     missing: missingParts(rows.map((m) => m.kind as string), scan.kind, { barcode: Boolean(scan.off_code) }),
     result,

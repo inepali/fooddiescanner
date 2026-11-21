@@ -237,9 +237,9 @@ test("fixCounts corrects old scripts: real counts, and no worry talk when nothin
 test("ensureHook ends on a question plus a like-and-comment line", () => {
   const one = (voiceover: string) => ({ title: "T", scenes: [{ seconds: 5, visual: "v", voiceover }] });
   const end = (v: string) => ensureHook(one(v)).scenes[0].voiceover;
-  assert.equal(end("Skip the sugary stuff."), "Skip the sugary stuff. Do you eat this? Like and comment your answer.");
-  assert.equal(end("Would you still eat this?"), "Would you still eat this? Like and comment your answer.");
-  assert.equal(end('Be honest, "do you eat this?"'), 'Be honest, "do you eat this?" Like and comment your answer.');
+  assert.equal(end("Skip the sugary stuff."), "Skip the sugary stuff. Do you eat this? Comment your answer.");
+  assert.equal(end("Would you still eat this?"), "Would you still eat this? Comment your answer.");
+  assert.equal(end('Be honest, "do you eat this?"'), 'Be honest, "do you eat this?" Comment your answer.');
   const done = one("Would you eat this? Like and comment below.");
   assert.equal(ensureHook(done), done); // already complete: untouched
 });

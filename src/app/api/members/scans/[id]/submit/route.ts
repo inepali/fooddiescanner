@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { analyzeScan } from "@/lib/analyze-scan";
 import { HttpError, json, paramId } from "@/lib/http";
 import { memberHandler, ownScan, type OwnScan } from "@/lib/member-routes";
-import { PART_LABELS, dailySubmitLimit, missingParts, nextSubmitAt, normalizeProductName, waitText } from "@/lib/member-scan";
+import { PART_LABELS, dailySubmitLimit, missingParts, nextSubmitAt, normalizeProductName, videoTotalProblem, waitText } from "@/lib/member-scan";
 import { copyMedia } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
 
@@ -45,13 +45,21 @@ async function addVideoAsClip(db: Db, scanId: string) {
     .limit(1)
     .maybeSingle();
   if (existing) return;
-  const { data: video } = await db.from("scan_media").select("storage_path").eq("scan_id", scanId).eq("kind", "product_video").maybeSingle();
-  if (!video) throw new HttpError("Add your video first.");
-  const ext = (video.storage_path as string).split(".").pop() ?? "mp4";
-  const key = `scans/${scanId}/upload-member-${randomUUID()}.${ext}`;
-  await copyMedia("videos", video.storage_path as string, key);
-  const { error } = await db.from("scan_media").insert({ scan_id: scanId, kind: "clip", storage_path: key, sort_order: 0 });
-  if (error) throw new Error(`Could not save the clip: ${error.message}`);
+  const { data: videos } = await db
+    .from("scan_media")
+    .select("storage_path, sort_order")
+    .eq("scan_id", scanId)
+    .eq("kind", "product_video")
+    .order("sort_order");
+  if (!videos?.length) throw new HttpError("Add your video first.");
+  // Every clip, in the member's order, becomes footage for the final render.
+  for (const [i, video] of videos.entries()) {
+    const ext = (video.storage_path as string).split(".").pop() ?? "mp4";
+    const key = `scans/${scanId}/upload-member-${randomUUID()}.${ext}`;
+    await copyMedia("videos", video.storage_path as string, key);
+    const { error } = await db.from("scan_media").insert({ scan_id: scanId, kind: "clip", storage_path: key, sort_order: i });
+    if (error) throw new Error(`Could not save the clip: ${error.message}`);
+  }
 }
 
 /**
@@ -74,6 +82,9 @@ export const POST = memberHandler(async (req, member, ctx) => {
     const body = (await req.json().catch(() => ({}))) as { product_name?: unknown };
     const name = normalizeProductName(body.product_name);
     if (!name) throw new HttpError("Type the product’s name (2–80 characters).");
+    const { data: lengths } = await db.from("scan_media").select("duration_s").eq("scan_id", scan.id).eq("kind", "product_video");
+    const totalProblem = videoTotalProblem((lengths ?? []).map((l) => Number(l.duration_s) || 0));
+    if (totalProblem) throw new HttpError(totalProblem);
     await checkDailyLimit(db, member.id, scan);
     await addVideoAsClip(db, scan.id);
     const { error } = await db
