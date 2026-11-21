@@ -173,7 +173,7 @@ export function RewardDetailsForm({ phone: p, tiktok: t }: { phone: string | nul
 
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
-      <Field id="phone" label="Phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" hint="US numbers can skip the +1." />
+      <Field id="phone" label="Phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" hint="Used only to verify you and pay rewards. No marketing texts. US numbers can skip the +1." />
       <Field
         id="tiktok"
         label="TikTok username"

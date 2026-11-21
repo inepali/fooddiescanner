@@ -13,16 +13,17 @@ export const revalidate = 300;
 const BANDS: { band: Band; range: string; text: string }[] = [
   { band: "great", range: "80–100", text: "Whole, minimally processed ingredients." },
   { band: "good", range: "60–79", text: "Mostly solid, a few things to note." },
-  { band: "fair", range: "40–59", text: "Fine sometimes. Read the flags." },
-  { band: "poor", range: "20–39", text: "Several additives or a lot of added sugar." },
-  { band: "avoid", range: "0–19", text: "Heavily processed with many red flags." },
+  { band: "fair", range: "40–59", text: "A mix. Worth reading the details." },
+  { band: "poor", range: "20–39", text: "More added sugar, refined oils or additives." },
+  { band: "avoid", range: "0–19", text: "Mostly highly processed ingredients." },
 ];
 
 const STEPS = [
   { title: "Scan the label", text: "The ingredient list and nutrition panel are photographed straight from the package, or looked up by barcode." },
   { title: "Score every ingredient", text: "Each ingredient gets a 0–100 score and a plain-English reason, in the order it appears on the label." },
   { title: "Cross-check", text: "When the product is on Open Food Facts, its Nutri-Score, NOVA and Green-Score are blended in." },
-  { title: "Publish the breakdown", text: "The full result lands in this library: searchable, shareable and free to read." },
+  { title: "Review", text: "A person checks the breakdown against the label photo before it is published." },
+  { title: "Publish the breakdown", text: "The result goes into this library: searchable, shareable and free to read." },
 ];
 
 const FAQ = [
@@ -36,7 +37,15 @@ const FAQ = [
   },
   {
     q: "Is this medical or dietary advice?",
-    a: "No. Breakdowns are AI-assisted and for general information. If you have an allergy, a health condition or specific dietary needs, check the actual package and talk to a doctor or registered dietitian.",
+    a: "No. Fooddie Scanner is for information and education only. Scores are our opinion under a general nutrition rubric, made with AI help, not a safety rating or a recommendation to buy or avoid anything. If you have an allergy, a health condition or specific dietary needs, check the actual package and talk to a doctor or registered dietitian.",
+  },
+  {
+    q: "Are you connected to the brands you scan?",
+    a: "No. Fooddie Scanner is independent and isn't affiliated with, sponsored by or endorsed by any brand or retailer. Brand names and package photos are shown only to identify the product being discussed.",
+  },
+  {
+    q: "I found a mistake. How do I report it?",
+    a: "Email us with the page link and, if you can, a photo of the current label. Brands and manufacturers are welcome to send corrections too. We review every request and update, rescan or remove the breakdown.",
   },
   {
     q: "The label I bought looks different. Why?",
@@ -45,11 +54,11 @@ const FAQ = [
   { q: "Is it free?", a: "Yes. Searching and reading every breakdown is free, with no account needed." },
   {
     q: "How do I become a contributor?",
-    a: "Contributors join by invite for now. If you have an invite code, sign up on the Join page. Otherwise, contact us and tell us a little about yourself and the stores you shop at.",
+    a: "Contributors join by invite for now and must be 18 or older and live in the US. If you have an invite code, sign up on the Join page. Otherwise, contact us and tell us a little about yourself and the stores you shop at.",
   },
   {
     q: "When do I get my rewards?",
-    a: "Points are added when the team reviews and accepts your submission. Before rewards can be paid, confirm your email and add your phone number and TikTok handle on your account page.",
+    a: "Points are added when the team reviews and accepts your submission. Points have no cash value until redeemed under the rules in your account. Before rewards can be paid, confirm your email and add your phone number and TikTok handle on your account page. See the Terms for the full program rules.",
   },
 ];
 
@@ -82,7 +91,7 @@ const ROLES = [
 ] as const;
 
 const PERKS = [
-  ["Earn rewards", "Every accepted scan and video earns points toward rewards."],
+  ["Earn rewards", "Accepted scans and videos earn points toward rewards, under the program rules in our Terms."],
   ["Get featured", "Accepted videos are posted to Fooddie Scanner's TikTok, Instagram and YouTube."],
   ["Help other shoppers", "Your scan becomes a free, searchable breakdown anyone can read."],
   ["Know your pantry", "See exactly what's in the food you already buy, ingredient by ingredient."],
@@ -213,7 +222,7 @@ export default async function Home() {
             <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#F2B705]">The Fooddie Score</p>
             <h2 className={h2}>One number, with the reasoning shown.</h2>
             <p className="text-[17px] leading-relaxed text-[#C9D3CB]">
-              Every product gets a score from 0 to 100. Open any breakdown to see exactly which ingredients moved it up or down, and why.
+              Every product gets a score from 0 to 100 under our rubric. Open any breakdown to see which ingredients moved it up or down, and why. The score reflects the ingredient list only, not whether a product is safe or right for you.
             </p>
           </div>
           <ul className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-5">
@@ -236,7 +245,7 @@ export default async function Home() {
               <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#134A2F]">Ingredient watch</p>
               <h2 className="font-display text-4xl font-extrabold leading-tight tracking-tight">The ingredients we flag most.</h2>
               <p className="text-[17px] leading-relaxed text-[#2F3D35]">
-                These low-scoring ingredients show up in the most products in the library. Tap one to see every product that contains it.
+                These ingredients score low under our rubric and show up in the most products in the library. Tap one to see every product that contains it.
               </p>
             </div>
             <ul className="flex flex-[1_1_420px] flex-col gap-3">
@@ -279,7 +288,7 @@ export default async function Home() {
               ["Every reason shown", "Each ingredient’s score comes with a short explanation, so you can judge the reasoning yourself."],
               ["Label order matters", "Ingredients are weighted by their position on the label, the way manufacturers list them by weight."],
               ["Outside data", "Where available, Open Food Facts grades (Nutri-Score, NOVA, Green-Score) are blended in and shown."],
-              ["Honest limits", "Analysis is AI-assisted using a general nutrition rubric. It’s a starting point, not medical advice."],
+              ["Honest limits", "Scores are our opinion, made with AI help under a general nutrition rubric and reviewed by a person. They’re a starting point, not medical advice or a safety rating."],
             ].map(([title, text]) => (
               <div key={title} className="space-y-2.5 border-t-[3px] border-[#14201A] pt-5">
                 <h3 className="text-xl font-bold">{title}</h3>
@@ -399,7 +408,7 @@ export default async function Home() {
             <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#F2B705]">Contact</p>
             <h2 className="font-display text-4xl font-extrabold leading-tight tracking-tight">Get in touch.</h2>
             <p className="text-[17px] leading-relaxed text-[#C9D3CB]">
-              Questions about a breakdown, a correction for a label, an invite request or a partnership idea? We’d love to hear from you.
+              Questions about a breakdown, a correction for a label (brands welcome), an invite request or a partnership idea? We’d love to hear from you.
             </p>
           </div>
           <dl className="grid grid-cols-1 gap-6 sm:grid-cols-2">

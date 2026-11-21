@@ -8,6 +8,7 @@ import Image from "next/image";
 import ScoreRing from "@/components/ScoreRing";
 import OffGrades from "@/components/site/OffGrades";
 import { coverImagePath, pickCoverRow } from "@/lib/media";
+import { CONTACT_EMAIL } from "@/components/LegalPage";
 
 // Cached and rebuilt at most every 10 minutes, so crawlers and shared links don't re-render it on every visit.
 // Renaming, unpublishing or deleting a scan refreshes it right away (revalidatePath in /api/scans/[id]).
@@ -27,7 +28,7 @@ const BAR: Record<Band, string> = {
   poor: "bg-orange-500",
   avoid: "bg-red-600",
 };
-const LABEL: Record<Band, string> = { great: "Great", good: "Good", fair: "Fair", poor: "Poor", avoid: "Avoid" };
+const LABEL: Record<Band, string> = { great: "Great", good: "Good", fair: "Fair", poor: "Low", avoid: "Very low" };
 
 type Ing = { position: number; raw_name: string; score: number; reason: string | null };
 
@@ -67,11 +68,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const name = data.scan.product_name ?? "Scanned product";
   return {
     title: `${name}: ${data.scan.overall_score}/100 ingredient score`,
-    description: `Ingredient-by-ingredient health breakdown for ${name}.`,
+    description: `Ingredient-by-ingredient label breakdown for ${name}.`,
     alternates: { canonical: `/p/${data.scan.id}` },
     openGraph: {
       title: `${name}: ${data.scan.overall_score}/100`,
-      description: `Ingredient-by-ingredient health breakdown for ${name}.`,
+      description: `Ingredient-by-ingredient label breakdown for ${name}.`,
       type: "article",
       ...(data.photos[0] ? { images: [{ url: data.photos[0], alt: name }] } : {}),
     },
@@ -155,7 +156,20 @@ export default async function PublicScanPage({ params }: { params: Promise<{ id:
       </section>
 
       <footer className="space-y-1 text-xs text-neutral-500">
-        <p>AI-assisted analysis using a general nutrition rubric. Not medical advice.</p>
+        <p>
+          Scores are Fooddie Scanner’s opinion under a general nutrition rubric, made with AI help, for information only. Not medical
+          advice or a safety rating. Based on the label as scanned; recipes and labels change, so check the package.
+        </p>
+        <p>
+          Fooddie Scanner isn’t affiliated with or endorsed by the maker of this product. Brand names belong to their owners.{" "}
+          <a className="underline" href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Correction: ${scan.product_name ?? scan.id}`)}`}>
+            Report an error
+          </a>
+          {" · "}
+          <Link className="underline" href="/terms">
+            Terms
+          </Link>
+        </p>
         {off && (
           <p>
             Product data from{" "}

@@ -177,7 +177,7 @@ export async function publicScanIds(db: SupabaseClient): Promise<{ id: string; c
   return ((data ?? []) as { id: string; created_at: string }[]).map((r) => ({ id: r.id, createdAt: r.created_at }));
 }
 
-export const BAND_LABEL: Record<Band, string> = { great: "Great", good: "Good", fair: "Fair", poor: "Poor", avoid: "Avoid" };
+export const BAND_LABEL: Record<Band, string> = { great: "Great", good: "Good", fair: "Fair", poor: "Low", avoid: "Very low" };
 
 /** Badge colours: the app's band shades, with text that passes contrast on each. */
 export const BAND_STYLE: Record<Band, { bg: string; fg: string }> = {

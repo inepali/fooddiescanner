@@ -20,8 +20,8 @@ const BAND_LABEL: Record<Band, string> = {
   great: "Great",
   good: "Good",
   fair: "Fair",
-  poor: "Poor",
-  avoid: "Avoid",
+  poor: "Low",
+  avoid: "Very low",
 };
 
 const REVIEW_TAG: Record<string, { text: string; cls: string }> = {

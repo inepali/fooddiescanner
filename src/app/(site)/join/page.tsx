@@ -21,6 +21,11 @@ export default async function JoinPage({ searchParams }: Props) {
           </p>
         </div>
         <JoinForm code={code} inviteOnly={inviteOnly} />
+        <p className="text-center text-[13px] text-[#5B6B60]">
+          By joining you confirm you’re 18 or older and live in the US, and you agree to the{" "}
+          <Link href="/terms" className="underline">Terms</Link> (including the rewards rules) and{" "}
+          <Link href="/privacy" className="underline">Privacy Policy</Link>. Points have no cash value until redeemed.
+        </p>
         <p className="text-center text-sm">
           Already joined? <Link href="/signin" className="font-semibold text-[#1E6B45]">Sign in</Link>
         </p>

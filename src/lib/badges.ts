@@ -17,7 +17,7 @@ const CHIP_R = 46;
 
 const LIGHT_TEXT = "#171717";
 const NOVA = [["1", "#038141", "Unprocessed"], ["2", "#FECB02", "Ingredient"], ["3", "#EE8100", "Processed"], ["4", "#E63E11", "Ultra-processed"]] as const;
-const NUTRI = [["A", "#038141", "Excellent"], ["B", "#85BB2F", "Good"], ["C", "#FECB02", "Average"], ["D", "#EE8100", "Poor"], ["E", "#E63E11", "Bad"]] as const;
+const NUTRI = [["A", "#038141", "Excellent"], ["B", "#85BB2F", "Good"], ["C", "#FECB02", "Average"], ["D", "#EE8100", "Low"], ["E", "#E63E11", "Very low"]] as const;
 const GREEN = [["A+", "#016B37", "Lowest impact"], ["A", "#038141", "Very low impact"], ["B", "#85BB2F", "Low impact"], ["C", "#FECB02", "Moderate impact"], ["D", "#EE8100", "High impact"], ["E", "#E63E11", "Very high impact"]] as const;
 
 export type BadgeCard = {
