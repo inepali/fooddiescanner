@@ -92,50 +92,41 @@ export default async function PublicScanPage({ params }: { params: Promise<{ id:
       <Link href="/search" className="inline-flex min-h-11 items-center text-[15px] font-semibold text-[#1E6B45]">
         ← Back to the library
       </Link>
-      <header className="overflow-hidden rounded-3xl border border-[#E2E6DE] bg-white shadow-sm">
-        {photos[0] && (
-          <div className="relative bg-gradient-to-b from-[#F6F7F2] to-[#EEF1EA]">
-            <Image
-              src={photos[0]}
-              alt={scan.product_name ?? "Product photo"}
-              width={800}
-              height={600}
-              sizes="(min-width: 672px) 672px, 100vw"
-              priority
-              className="mx-auto h-72 w-full object-contain p-4 sm:h-80"
-            />
-            <span className={`absolute right-4 top-4 rounded-full px-3 py-1 text-sm font-bold text-white shadow ${BAR[band]}`}>
-              {LABEL[band]}
-            </span>
-          </div>
-        )}
-        {photos.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto px-4 pt-3">
-            {photos.slice(1).map((src) => (
+      <header className="space-y-3 rounded-3xl border border-[#E2E6DE] bg-white p-4 shadow-sm sm:p-5">
+        <div className="flex items-center gap-4">
+          {photos[0] && (
+            <a href={photos[0]} target="_blank" rel="noreferrer" className="shrink-0" aria-label="Open the product photo">
               <Image
-                key={src}
-                src={src}
-                alt=""
-                width={64}
-                height={64}
-                sizes="64px"
-                className="h-16 w-16 shrink-0 rounded-xl border border-[#E2E6DE] bg-[#F6F7F2] object-cover"
+                src={photos[0]}
+                alt={scan.product_name ?? "Product photo"}
+                width={112}
+                height={112}
+                sizes="112px"
+                priority
+                className="h-24 w-24 rounded-2xl border border-[#E2E6DE] bg-[#F6F7F2] object-cover shadow-sm sm:h-28 sm:w-28"
               />
-            ))}
-          </div>
-        )}
-        <div className="flex items-center gap-5 p-5">
-          <ScoreRing score={score} className="h-24 w-24 sm:h-28 sm:w-28" />
-          <div className="min-w-0 space-y-1">
-            <h1 className="font-display text-2xl font-extrabold leading-tight tracking-tight [overflow-wrap:anywhere] sm:text-3xl">
+            </a>
+          )}
+          <div className="min-w-0 flex-1 space-y-1">
+            <h1 className="font-display text-xl font-extrabold leading-tight tracking-tight [overflow-wrap:anywhere] sm:text-3xl">
               {scan.product_name ?? "Scanned product"}
             </h1>
-            <p className="text-neutral-600">
+            <p className="text-sm text-neutral-600 sm:text-base">
               Overall: <strong>{LABEL[band]}</strong> ({score}/100) · {ingredients.length} {ingredients.length === 1 ? "ingredient" : "ingredients"}
             </p>
             {allergens.length > 0 && <p className="text-sm text-neutral-500">Contains: {allergens.join(", ")}</p>}
           </div>
+          <ScoreRing score={score} className="h-20 w-20 sm:h-24 sm:w-24" />
         </div>
+        {photos.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto">
+            {photos.slice(1).map((src) => (
+              <a key={src} href={src} target="_blank" rel="noreferrer" className="shrink-0" aria-label="Open photo">
+                <Image src={src} alt="" width={56} height={56} sizes="56px" className="h-14 w-14 rounded-xl border border-[#E2E6DE] bg-[#F6F7F2] object-cover" />
+              </a>
+            ))}
+          </div>
+        )}
       </header>
 
       {off && <OffGrades off={off} />}
