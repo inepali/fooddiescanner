@@ -4,7 +4,7 @@ import { wordsFromAlignment } from "@/lib/captions";
 import { isMock } from "@/lib/mock";
 import { latestVideo } from "@/lib/queries";
 import { mediaUrl, putMedia } from "@/lib/storage";
-import { narration, parseScript } from "@/lib/script";
+import { ensureHook, fixCounts, labelCounts, narration, parseScript } from "@/lib/script";
 import { parseDelivery } from "@/lib/delivery";
 import { cleanLines, withCustomLines } from "@/lib/custom-lines";
 import { HttpError, handler, json, paramId } from "@/lib/http";
@@ -24,11 +24,18 @@ export const POST = handler(async (req, ctx) => {
   const video = await latestVideo(db, id);
   if (!video?.script) throw new HttpError("Create the script first.");
 
+  // The real best/worst counts for this label, so an older script that says "the five I'd worry
+  // about" is corrected before it is spoken (and the corrected script is saved with the take).
+  const { data: ings } = await db.from("scan_ingredients").select("raw_name, score, reason").eq("scan_id", id).order("position");
+  const counts = ings?.length ? labelCounts(ings.map((i: { raw_name: string; score: number; reason: string | null }) => ({ name: i.raw_name, score: i.score, reason: i.reason }))) : null;
+
   let text: string;
   let scriptJson = video.script;
   try {
+    const parsed = parseScript(video.script);
+    const fixed = counts ? ensureHook(fixCounts(parsed, counts.best, counts.worst)) : parsed;
     // Your own lines become extra scenes in the saved script, so captions and pictures follow the voice.
-    const withLines = withCustomLines(parseScript(video.script), cleanLines(body.custom_lines));
+    const withLines = withCustomLines(fixed, cleanLines(body.custom_lines));
     scriptJson = JSON.stringify(withLines);
     text = narration(withLines);
   } catch {

@@ -126,7 +126,7 @@ test("parseVoices puts your own voices first, then defaults, then library voices
   assert.deepEqual(parseVoices(null), []);
 });
 
-import { MAX_WORDS, MIN_WORDS, buildPrompt, wrongCount, ensureHook, wordCount, groupFor, parseTone, pickCandidates } from "./script.ts";
+import { MAX_WORDS, MIN_WORDS, buildPrompt, wrongCount, fixCounts, ensureHook, wordCount, groupFor, parseTone, pickCandidates } from "./script.ts";
 
 const ings = [
   { name: "Water", score: 95, reason: "Hydrating." },
@@ -210,6 +210,28 @@ test("wrongCount catches a script that says the wrong number", () => {
   assert.match(wrongCount(s("Now the ones I'd worry about."), 3, 0) ?? "", /nothing on this label/);
   assert.equal(wrongCount(s("The three best, then the two worst. Look for five ingredients or fewer."), 3, 2), null);
   assert.equal(wrongCount(s("Three clean ingredients. Nothing to worry about here."), 3, 0), null);
+});
+
+test("fixCounts corrects old scripts: real counts, and no worry talk when nothing is bad", () => {
+  const sc = (...voiceovers: string[]) => ({ title: "T", scenes: voiceovers.map((voiceover) => ({ seconds: 8, visual: "v", voiceover })) });
+  const milk = fixCounts(
+    sc(
+      "Number three: vitamin D3. It helps your body absorb calcium. Now the five I'd worry about. Stay to the end.",
+      "Here's the honest part: this milk has no ingredients I'd flag as concerning. But wait until you hear what's hiding in the next one.",
+      "Now the five worst.",
+    ),
+    3,
+    0,
+  );
+  assert.deepEqual(milk.scenes.map((s) => s.voiceover), [
+    "Number three: vitamin D3. It helps your body absorb calcium.",
+    "Here's the honest part: this milk has no ingredients I'd flag as concerning.",
+  ]); // the scene that was only worst talk is dropped
+  const two = fixCounts(sc("The five best first. Now the five I'd worry about. Stay to the end."), 3, 2);
+  assert.equal(two.scenes[0].voiceover, "The three best first. Now the two I'd worry about. Stay to the end.");
+  assert.equal(wrongCount(sc("Now the five I'd worry about."), 3, 2)?.includes("5 worst"), true);
+  const custom = fixCounts({ title: "T", scenes: [{ seconds: 5, visual: "v", voiceover: "My five worst picks.", custom: true }] }, 3, 0);
+  assert.equal(custom.scenes[0].voiceover, "My five worst picks."); // your own lines are left alone
 });
 
 test("ensureHook ends on a question plus a like-and-comment line", () => {
