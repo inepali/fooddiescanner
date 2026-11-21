@@ -229,7 +229,7 @@ export default async function ScanPage({ params }: { params: Promise<{ id: strin
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-neutral-400">Scores are a general nutrition rubric, not medical advice.</p>
+        <p className="text-xs text-neutral-400">Scores are our opinion under a general nutrition rubric, for information only. Not medical advice.</p>
         <DeleteScanButton scanId={id} name={scan.product_name} after="history" />
       </div>
     </div>

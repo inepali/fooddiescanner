@@ -80,11 +80,11 @@ export function OffCrossCheck({
         </p>
       )}
       <p className="text-xs text-neutral-400">
-        Matched “{off.name ?? off.code}”{off.brands ? ` (${off.brands})` : ""}. Data from{" "}
+        Matched “{off.name ?? off.code}”{off.brands ? ` (${off.brands})` : ""}. Grades and nutrition figures come from{" "}
         <a href={off.url} className="underline" target="_blank" rel="noreferrer">
           Open Food Facts
         </a>{" "}
-        (ODbL).
+        (Open Database License). We don’t issue these grades and can’t guarantee they’re accurate or current.
       </p>
     </section>
   );

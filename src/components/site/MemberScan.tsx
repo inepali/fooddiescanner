@@ -242,7 +242,7 @@ export default function MemberScan({ kind = "scan", wanted = [] }: { kind?: Subm
           <OffCrossCheck off={result.off} labelScore={result.label_score} externalScore={result.external_score} overall={overall} />
         )}
         <IngredientList ingredients={result.ingredients} />
-        <p className="text-xs text-[#5B6B60]">Scores are a general nutrition rubric, not medical advice.</p>
+        <p className="text-xs text-[#5B6B60]">Scores are our opinion under a general nutrition rubric, for information only. Not medical advice.</p>
         <div className="grid gap-3">
           <a href={page} className={`${btn} bg-[#1E6B45] text-white`}>
             Scan another product
