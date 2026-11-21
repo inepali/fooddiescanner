@@ -126,7 +126,7 @@ test("parseVoices puts your own voices first, then defaults, then library voices
   assert.deepEqual(parseVoices(null), []);
 });
 
-import { MAX_WORDS, MIN_WORDS, buildPrompt, ensureHook, wordCount, groupFor, parseTone, pickCandidates } from "./script.ts";
+import { MAX_WORDS, MIN_WORDS, buildPrompt, wrongCount, ensureHook, wordCount, groupFor, parseTone, pickCandidates } from "./script.ts";
 
 const ings = [
   { name: "Water", score: 95, reason: "Hydrating." },
@@ -155,7 +155,8 @@ test("pickCandidates: best greens, worst reds, trivial water skipped", () => {
 test("prompt: groups and tone in, no numeric scores, ends on a question rule", () => {
   const p = buildPrompt({ productName: "Oat Bar", overall: 52, allergens: [], ingredients: ings, tone: "playful" });
   assert.match(p, /Upbeat, witty/);
-  assert.match(p, /FIVE BEST[^]*Whole grain oats[^]*FIVE WORST[^]*Red 40/);
+  assert.match(p, /THE TWO BEST[^]*Whole grain oats[^]*THE FIVE WORST[^]*Red 40/); // 2 good; 5 of the fair/poor ones
+  assert.match(p, /COUNTS FOR THIS LABEL/);
   assert.match(p, /may be harmful for regular consumption/); // under 60: the concerning verdict
   assert.doesNotMatch(p, /VERDICT FOR THIS PRODUCT: it is mostly good/);
   assert.match(p, /Do you eat this\?/);
@@ -168,13 +169,47 @@ test("prompt: groups and tone in, no numeric scores, ends on a question rule", (
 test("prompt: empty group is shown as none", () => {
   const p = buildPrompt({ productName: null, overall: 90, allergens: [], ingredients: [{ name: "Oats", score: 95, reason: null }] });
   assert.match(p, /VERDICT FOR THIS PRODUCT: it is mostly good/); // 60 and over: praise, extra detail on the worse ones
-  assert.match(p, /FIVE WORST[^]*Oats \[good\]/);
-  assert.match(p, /if there are none, say so/);
+  assert.match(p, /THE BEST ingredient on this label[^]*Oats \[good\][^]*THE WORST ingredients on this label[^]*\(none\)/); // one good ingredient: best only
+  assert.match(p, /skip this section/);
+  assert.match(p, /NO worst ingredients/);
+  assert.match(p, /nothing to warn about on this label/);
   assert.doesNotMatch(p, /may be harmful for regular consumption/);
   const c = pickCandidates(ings);
-  assert.equal(c.best.length, 5);
+  assert.deepEqual([c.best.length, c.worst.length], [2, 5]); // water skipped; best only good, worst only fair/poor
   assert.equal(c.worst[0].group, "poor");
   assert.ok(c.best[0].name !== c.worst[0].name);
+});
+
+test("pickCandidates: best only good, worst only fair/poor, five each at most, never overlap", () => {
+  const mk = (scores: number[]) => scores.map((score, i) => ({ name: `I${i}`, score, reason: null }));
+  const allGood = pickCandidates(mk([90, 85, 80]));
+  assert.deepEqual([allGood.best.length, allGood.worst.length], [3, 0]); // nothing to worry about
+  const allBad = pickCandidates(mk([30, 20, 50]));
+  assert.deepEqual([allBad.best.length, allBad.worst.length], [0, 3]);
+  const mixed = pickCandidates(mk([95, 90, 85, 80, 75, 70, 65, 50, 45, 30, 20, 10]));
+  assert.deepEqual([mixed.best.length, mixed.worst.length], [5, 5]);
+  assert.equal(mixed.worst[0].name, "I11");
+  for (const c of [allGood, allBad, mixed]) {
+    const names = [...c.best, ...c.worst].map((x) => x.name);
+    assert.equal(new Set(names).size, names.length);
+  }
+  const p = buildPrompt({ productName: null, overall: 85, allergens: [], ingredients: mk([90, 85, 80, 55]) });
+  assert.match(p, /the three best ingredients and the worst ingredient/);
+  assert.match(p, /NOT five and five/);
+  const clean = buildPrompt({ productName: null, overall: 90, allergens: [], ingredients: mk([90, 85]) });
+  assert.match(clean, /never say \"worst\"/);
+  const full = buildPrompt({ productName: null, overall: 50, allergens: [], ingredients: mk([95, 90, 85, 80, 75, 50, 45, 30, 20, 10]) });
+  assert.match(full, /THE FIVE BEST[^]*THE FIVE WORST/);
+  assert.doesNotMatch(full, /COUNTS FOR THIS LABEL/);
+});
+
+test("wrongCount catches a script that says the wrong number", () => {
+  const s = (voiceover: string) => ({ title: "T", scenes: [{ seconds: 5, visual: "v", voiceover }] });
+  assert.match(wrongCount(s("Now the five worst. Stay to the end."), 3, 2) ?? "", /says 5 worst/);
+  assert.match(wrongCount(s("Here are the 5 best."), 2, 0) ?? "", /says 5 best/);
+  assert.match(wrongCount(s("Now the ones I'd worry about."), 3, 0) ?? "", /nothing on this label/);
+  assert.equal(wrongCount(s("The three best, then the two worst. Look for five ingredients or fewer."), 3, 2), null);
+  assert.equal(wrongCount(s("Three clean ingredients. Nothing to worry about here."), 3, 0), null);
 });
 
 test("ensureHook ends on a question plus a like-and-comment line", () => {
