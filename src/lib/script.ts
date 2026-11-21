@@ -14,8 +14,11 @@ export { DEFAULT_TONE, TONES, parseTone, type Tone };
 export type Section = "hook" | "good" | "fair" | "poor" | "outro";
 export const SECTIONS: Section[] = ["hook", "good", "fair", "poor", "outro"];
 
-export type VideoScene = { seconds: number; visual: string; voiceover: string; photo?: number; section?: Section; custom?: boolean };
-export type VideoScript = { title: string; scenes: VideoScene[] };
+/** `custom`: one of your saved lines (re-added on every take). `edited`: you changed it by hand, so code never rewrites it. */
+export type VideoScene = { seconds: number; visual: string; voiceover: string; photo?: number; section?: Section; custom?: boolean; edited?: boolean };
+/** The product the model suggests scanning next, so each video sets up the next one. */
+export type NextScan = { product: string; why: string; teaser: string };
+export type VideoScript = { title: string; scenes: VideoScene[]; next?: NextScan };
 
 export type ScriptInput = {
   productName: string | null;
@@ -27,6 +30,8 @@ export type ScriptInput = {
   /** Photos of the real product sent with the request, numbered from 1 in the prompt. */
   photos?: LlmImage[];
   tone?: Tone;
+  /** Recent scans (newest first), so the "scan this next" pick builds a series instead of repeating. */
+  recentScans?: { name: string; score: number }[];
 };
 
 export type Group = "good" | "fair" | "poor";
@@ -95,6 +100,13 @@ export function pickCandidates(ings: ScriptInput["ingredients"]): Record<Group, 
   };
 }
 
+/** A starting point for the hook: the surprise, never "I'll show you the five best and five worst". */
+function concerningHook(overall: number): string {
+  return overall >= 60
+    ? `"Everyone says skip this one. The label says otherwise."`
+    : `"Looks healthy, right? Read the second ingredient."`;
+}
+
 function overallFeel(overall: number): string {
   return overall >= 70 ? "mostly on the good side" : overall >= 45 ? "a mixed bag" : "mostly on the concerning side";
 }
@@ -142,10 +154,8 @@ export function buildPrompt(i: ScriptInput, compact = false) {
   const worstHeader = nw === 0 ? "THE WORST ingredients" : nw === 1 ? "THE WORST ingredient" : `THE ${W.toUpperCase()} WORST ingredients`;
   const hookExample =
     nw === 0
-      ? `"Only ${B} ingredient${nb === 1 ? "" : "s"} on this label. Let's see if ${nb === 1 ? "it holds" : "they hold"} up."`
-      : nb === 0
-        ? `"I'll show you ${worst} in this. Stay for the last one."`
-        : `"I'll show you ${best} and ${worst} in this. Stay for the last one."`;
+      ? `"Is ${i.productName ? "this" : "this product"} actually healthy? ${nb === 1 ? "One" : B[0].toUpperCase() + B.slice(1)} ingredient${nb === 1 ? "" : "s"}. That's it."`
+      : concerningHook(i.overall);
   const goodStep =
     nb === 0
       ? `2. "good": skip this section (no ingredient here is on the good side); say so in one honest line inside the hook or the first "poor" scene.`
@@ -154,6 +164,11 @@ export function buildPrompt(i: ScriptInput, compact = false) {
     nw === 0
       ? `3. "poor": skip this section. Nothing on this label needs a warning: say so with relief in the outro instead of inventing a concern.`
       : `3. "poor" (${nw <= 2 ? "1 or 2 scenes" : "2 or 3 scenes"}): ${worst.toUpperCase()}${nw > 1 ? `, saving the very worst for last (count down from number ${nw} to the worst)` : ""}. Explain the specific concern for your health for each in plain words (for example added sugar, a refined oil, a heavily processed additive) and why it matters. Say "may" where the science is not settled.`;
+
+  const recent = (i.recentScans ?? []).slice(0, 15);
+  const recentLine = recent.length
+    ? recent.map((r) => `${r.name} (${groupFor(r.score)})`).join("; ")
+    : "(none yet)";
 
   const longNote = long
     ? `\nLONG LABEL: this product lists ${i.ingredients.length} ingredients. Do NOT try to cover them all and do not deliberate over the rest: use only the ingredients listed in the two lists below, say once that the list is long (\"a very long ingredient list\"), and answer straight away with the JSON.\n`
@@ -177,7 +192,12 @@ ${worstHeader} on this label, worst first:
 ${tagged(c.worst)}
 
 Return ONLY a JSON object (no markdown fences) shaped like:
-{ "title": string, "scenes": [ { "section": "hook" | "good" | "fair" | "poor" | "outro", "seconds": integer, "visual": string, "voiceover": string${photoCount ? ', "photo": integer' : ""} } ] }
+{ "title": string, "scenes": [ { "section": "hook" | "good" | "fair" | "poor" | "outro", "seconds": integer, "visual": string, "voiceover": string${photoCount ? ', "photo": integer' : ""} } ], "next_scan": { "product": string, "why": string, "teaser": string } }
+
+TOMORROW'S SCAN ("next_scan"): pick ONE real, widely sold packaged product to scan next, so the videos connect like a series and people follow for the next episode. Already scanned (newest first; never pick one of these): ${recentLine}.
+- Connect the dots: a head-to-head with this product (the store brand vs the name brand, the "healthy" version vs the regular one, the kids' version, the same category from another aisle), or the next step in a running theme. Prefer products people argue about or buy every week.
+- "product": the product name as it appears in the shop (brand + product). "why": one sentence for the admin on why it connects. "teaser": one short spoken line, 12 words or fewer, that names the matchup, e.g. "Tomorrow: the store brand. Is it any better?"
+- Never claim what tomorrow's score will be.
 
 STORY PLAN: "${nb === 0 ? "no best" : best} first, ${nw === 0 ? "no worst" : worst} last". ${nb === 0 ? "" : `Name ${best} first`}${nb > 0 && nw > 0 ? `, then ask viewers to stay until you reveal ${worst}.` : nw > 0 ? `Reveal ${worst}.` : "."} ${
     concerning
@@ -186,19 +206,20 @@ STORY PLAN: "${nb === 0 ? "no best" : best} first, ${nw === 0 ? "no worst" : wor
   }
 
 STRUCTURE (in this order, 7 to 9 scenes, "seconds" adding up to about 60; the retention hooks below are woven into these scenes, they are not extra scenes):
-1. "hook" (about 4 s): a scroll-stopper that promises the reveal, for example ${hookExample} The first sentence is 12 words or fewer and creates a curiosity gap or a contradiction about THIS product (see MAKE IT WORTH WATCHING). Do not mention a score.
+1. "hook" (about 4 s): the most surprising TRUE thing about this label, said in the first two seconds, for example ${hookExample} The first sentence is 10 words or fewer and creates a curiosity gap or a contradiction about THIS product (see MAKE IT WORTH WATCHING). Within the first five seconds, say the product type in the plain words people type into search ("Is this cereal healthy?", "what's really in Oreos"), because TikTok search reads the speech. Never open by announcing the format or the counts ("I'll show you the five best and five worst"): that is the line viewers scroll past. Do not mention a score.
 ${goodStep}
 ${poorStep}
-4. "outro" (about 8 s): the verdict in words (no number), then a "Try this instead" tip: tell people what to look for in a better version of this kind of product, as concrete label rules they can check in the shop ("look for one with five ingredients or fewer and no added sugar"). Name no brands and invent no numbers beyond simple label rules. Include one short, quotable "send this to someone who…" line. Then finish with a short question that invites comments, such as "Do you eat this?", and put one last short call to action right after it: "Like and comment your answer." The video MUST end with that question followed by that call to action (like and comment).
+4. "outro" (about 8 s): the verdict in words (no number), then a "Try this instead" tip: tell people what to look for in a better version of this kind of product, as concrete label rules they can check in the shop ("look for one with five ingredients or fewer and no added sugar"). Name no brands and invent no numbers beyond simple label rules. Include one short, quotable "send this to someone who…" line. Then the "next_scan" teaser, word for word, followed by "Follow so you don't miss it." Then finish with a short question that invites comments, such as "Do you eat this?", and one last short call to action: "Comment your answer." The video MUST end with that question followed by that call to action.
 Do not use a "fair" scene. Cover exactly the ingredients in the two lists above, no more and no fewer, and use their real counts.
 
 KEEP PEOPLE WATCHING (retention hooks). Viewers tend to drop off around 10-15 seconds, so plant three hooks. Count time at about 2.5 spoken words per second:
 - Hook at about 0:15: the last sentence of the scene that ends near the 15-second mark is an open-loop teaser that makes people stay for what comes next, for example "But wait until you hear what's hiding in the next one." Name no ingredient and no number in the teaser itself.
 - Hook at about 0:35: the last sentence of the scene that ends near the 35-second mark is a second, stronger teaser pointing at the most concerning ingredient, which you save for after this point (put the very worst one in the final stretch). If nothing on the label is concerning, tease the one thing that surprised you.
-- Closing hook: end the "outro" with the takeaway, the "Try this instead" tip, the final question, and the like-and-comment call to action from rule 4.
+- Closing hook: end the "outro" with the takeaway, the "Try this instead" tip, tomorrow's teaser with "Follow so you don't miss it.", the final question and the comment call to action from rule 4.
 Pay each teaser off within the next 10-20 seconds. A teaser must never promise something the video does not deliver, and must not be clickbait, a scare tactic or a numeric score. Plan the scene lengths so a scene boundary lands near 0:15 and near 0:35.
 MAKE IT WORTH WATCHING AND SHARING (story craft). Treat the label like a short mystery with a reveal, not a list:
 - Hook formats that work (pick the one that fits the facts, never invent a claim): (a) contradiction, "It says 'natural'. The label says something else."; (b) a question people want answered, "What's the first thing on this label? Not what you think."; (c) a challenge, "Guess which ingredient shows up second."; (d) stakes, "Think twice before this goes in your cart." Open with the most surprising TRUE thing about this label, not with "Hey guys" or "Today I'm looking at".
+- Plain words beat jargon: if you name a rating such as Nutri-Score or NOVA group, say what it means right after in everyday words ("NOVA group 4. That means ultra-processed."). E-numbers and chemical names get a plain-words nickname ("a flavor booster called E621").
 - Use label order as drama: ingredients are listed from most to least, so where an ingredient sits is a real, checkable fact ("Sugar is number two. Ingredients are listed by amount, so that's a lot.").
 - One vivid comparison per video, qualitative only ("reads more like a dessert recipe than breakfast"). No made-up numbers, statistics or studies.
 - Rhythm: short punchy sentences, mostly 10 words or fewer, with a beat of contrast ("Looks healthy. Reads differently."). Speak to "you". Strong verbs. No filler, no throat-clearing, no repeating the product name more than twice.
@@ -248,21 +269,32 @@ export function parseScript(text: string): VideoScript {
       ...(Number.isInteger(photo) && photo >= 1 && photo <= 12 ? { photo } : {}),
       ...(section ? { section } : {}),
       ...(o.custom === true ? { custom: true } : {}),
+      ...(o.edited === true ? { edited: true } : {}),
     });
   }
   if (scenes.length === 0) throw new Error("Model returned no scenes");
 
   const title = typeof data.title === "string" && data.title.trim() ? data.title.trim() : "Ingredient check";
-  return { title, scenes };
+  const next = parseNext(data.next_scan ?? data.next);
+  return { title, scenes, ...(next ? { next } : {}) };
 }
 
-const CTA = "Like and comment your answer.";
-const ENDS_WITH_CTA = /\b(like|comment)\b[^?]*$/i;
+function parseNext(v: unknown): NextScan | null {
+  if (typeof v !== "object" || v === null) return null;
+  const o = v as Record<string, unknown>;
+  const str = (x: unknown, max: number) => (typeof x === "string" ? x.replace(/\s+/g, " ").trim().slice(0, max) : "");
+  const product = str(o.product, 120);
+  if (!product) return null;
+  return { product, why: str(o.why, 300), teaser: str(o.teaser, 160) };
+}
+
+const CTA = "Comment your answer.";
+const ENDS_WITH_CTA = /\b(like|comment|follow)\b[^?]*$/i;
 
 /** Every script must end on a question, then a like-and-comment call to action. If the model forgot either, add it. */
 export function ensureHook(script: VideoScript): VideoScript {
   const last = script.scenes[script.scenes.length - 1];
-  if (!last) return script;
+  if (!last || last.edited) return script; // you wrote the ending yourself: leave it as is
   const text = last.voiceover.trim();
   let out = text;
   if (!ENDS_WITH_CTA.test(out) || !out.includes("?")) {
@@ -327,7 +359,7 @@ export function fixCounts(script: VideoScript, best: number, worst: number): Vid
     );
   const scenes: VideoScene[] = [];
   for (const sc of script.scenes) {
-    if (sc.custom) {
+    if (sc.custom || sc.edited) {
       scenes.push(sc);
       continue;
     }

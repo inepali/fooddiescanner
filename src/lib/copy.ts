@@ -15,6 +15,8 @@ export type CopyInput = {
   scriptTitle: string | null;
   offFacts?: string | null;
   ingredients: { name: string; score: number }[]; // label order
+  /** "Scan this next" from the script, so the caption can tease tomorrow's video. */
+  nextProduct?: string | null;
 };
 
 /** Lowercase, strip '#', spaces and punctuation, drop empties and duplicates. */
@@ -76,8 +78,15 @@ Facts (use ONLY these; do not invent numbers, brands or health claims):
 ${i.offFacts ? `- Open Food Facts: ${i.offFacts}\n` : ""}- Lowest scoring (score): ${list(byScore.slice(0, 3))}
 - Highest scoring (score): ${list(byScore.slice(-2).reverse())}
 
+${i.nextProduct ? `- Tomorrow's video: ${i.nextProduct}
+` : ""}
+TIKTOK IS A SEARCH ENGINE: people find these videos by typing questions. So for TikTok:
+- "title": a plain search question or phrase with the product name, the way people type it, e.g. "Is Oreo healthy? Every ingredient ranked" or "What's really in Rao's sauce". No scores, no jargon.
+- "description": first line repeats the search phrase in other words ("Oreo ingredients, honestly"). Then one line with the single most surprising finding in everyday words. No Nutri-Score, NOVA, Green-Score or E-numbers here; say "ultra-processed", "added sugar", "artificial colors" instead.${i.nextProduct ? " End with a short line teasing tomorrow's video by name and asking people to follow, e.g. \"Tomorrow: Chips Ahoy. Follow so you don't miss it.\"" : ""} Then "Full report: fooddiescanner.com (link in bio)".
+- "hashtags": exactly 3 to 5: one broad (food or healthyeating), one topic (foodlabel or ingredients), and the rest product or category terms people search (oreo, cookies). No #fyp style tags.
+
 Return ONLY a JSON object, no markdown fences:
-{"tiktok": {"title": max 90 chars, "description": max 250 chars, "hashtags": 3 to 5 words without the # sign, mixing one or two broad tags with niche ones},
+{"tiktok": {"title": max 90 chars, "description": max 250 chars, "hashtags": 3 to 5 words without the # sign},
  "instagram": {"title": max 90 chars, "description": max 500 chars, "hashtags": 3 to 5 words without the # sign, mixing one or two broad tags with niche ones},
  "youtube": {"title": max 90 chars, searchable: the product name plus a plain hook such as "ingredients, honestly", "description": max 700 chars, first sentence is a keyword-rich summary of what the video shows, then 1-2 short lines of detail, "hashtags": 18 to 20 words without the # sign, no duplicates, ordered most important first: broad (food, nutrition, healthyeating), topic (ingredients, foodlabel, nutriscore), and product-specific search terms. They are used as YouTube tags}}
 No medical or disease claims, no emoji spam.`;
