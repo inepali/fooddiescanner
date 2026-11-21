@@ -287,7 +287,7 @@ export function wrongCount(script: VideoScript, best: number, worst: number): st
   const text = narration(script).toLowerCase();
   const said = (kind: "best" | "worst") => {
     const words = kind === "best" ? "best|healthiest" : "worst|worse";
-    const re = new RegExp(`\\b(one|two|three|four|five|six|seven|eight|nine|ten|\\d+)\\s+(?:(?:${words})\\b|(?:ingredients?|things?)\\s+(?:i'?d|to)\\s+worry)`, "g");
+    const re = new RegExp(`\\b(one|two|three|four|five|six|seven|eight|nine|ten|\\d+)\\s+(?:(?:${words})\\b${kind === "worst" ? "|(?:(?:ingredients?|things?|ones?)\\s+)?(?:i'?d|to)\\s+worry" : ""})`, "g");
     return [...text.matchAll(re)].map((m) => COUNT_WORDS[m[1]] ?? Number(m[1]));
   };
   const badBest = said("best").find((n) => n !== best);
@@ -298,10 +298,56 @@ export function wrongCount(script: VideoScript, best: number, worst: number): st
   return null;
 }
 
+/** How many best and worst ingredients a label has (the counts every script must use). */
+export function labelCounts(ings: ScriptInput["ingredients"]): { best: number; worst: number } {
+  const c = pickCandidates(ings);
+  return { best: c.best.length, worst: c.worst.length };
+}
+
+const NUM = "one|two|three|four|five|six|seven|eight|nine|ten|\\d+";
+const WORRY_TALK = /\b(i'?d worry|to worry about|worst|worse|stay to the end|stay till the end|stick around for the bad|what's hiding|wait (?:until|till) you hear)\b/i;
+const NOTHING_TO_WORRY = /\b(nothing|no)\b[^.!?]*\b(worry|worst|worse|concern)/i;
+
+/**
+ * Code-level safety net for the counts, run on every new script and again before each voice take
+ * (so scripts saved before a fix are corrected too): "the five I'd worry about" becomes the real
+ * count, and when nothing on the label is fair or poor, every sentence that talks about worst
+ * ingredients, plus the "stay to the end" that leads into them, is removed. Lines the user added
+ * themselves (custom scenes) are left alone.
+ */
+export function fixCounts(script: VideoScript, best: number, worst: number): VideoScript {
+  const swap = (text: string, nouns: string, n: number, worry: boolean) =>
+    text.replace(
+      new RegExp(`\\b(${NUM})(\\s+(?:(?:${nouns})\\b${worry ? "|(?:(?:ingredients?|things?|ones?)\\s+)?(?:i'?d|to)\\s+worry" : ""}))`, "gi"),
+      (m, num: string, rest: string) => {
+        const word = countWord(n);
+        const out = num[0] === num[0].toUpperCase() && /[a-z]/i.test(num) ? word[0].toUpperCase() + word.slice(1) : word;
+        return n > 0 ? `${out}${rest}` : m;
+      },
+    );
+  const scenes: VideoScene[] = [];
+  for (const sc of script.scenes) {
+    if (sc.custom) {
+      scenes.push(sc);
+      continue;
+    }
+    let text = sc.voiceover;
+    if (worst === 0) {
+      const sentences = text.match(/[^.!?]+[.!?]+["')\]]*\s*|[^.!?]+$/g) ?? [text];
+      text = sentences.filter((x) => !WORRY_TALK.test(x) || NOTHING_TO_WORRY.test(x)).join("").trim();
+    } else {
+      text = swap(text, "worst|worse", worst, true);
+    }
+    if (best > 0) text = swap(text, "best|healthiest", best, false);
+    if (!text.trim()) continue; // a scene that was only "worst" talk is dropped
+    scenes.push({ ...sc, voiceover: text.trim() });
+  }
+  return scenes.length ? { ...script, scenes } : script;
+}
+
 export async function createScript(input: ScriptInput): Promise<VideoScript> {
   const base = buildPrompt(input);
-  const picked = pickCandidates(input.ingredients);
-  const counts = { best: picked.best.length, worst: picked.worst.length };
+  const counts = labelCounts(input.ingredients);
   let prompt = base;
   let compactPrompt = false;
   let photos = input.photos ?? [];
@@ -323,7 +369,7 @@ export async function createScript(input: ScriptInput): Promise<VideoScript> {
     }
     let script: VideoScript;
     try {
-      script = ensureHook(parseScript(lastText));
+      script = ensureHook(fixCounts(parseScript(lastText), counts.best, counts.worst));
     } catch (err) {
       if (attempt === 2 && !best) {
         const snippet = lastText.trim().replace(/\s+/g, " ").slice(0, 160);
