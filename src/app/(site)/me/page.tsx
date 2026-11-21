@@ -6,6 +6,7 @@ import { memberFromToken } from "@/lib/member-auth";
 import { canSubmit } from "@/lib/member-scan";
 import { MEMBER_ACCESS_COOKIE, MEMBER_REFRESH_COOKIE, rewardsMissing } from "@/lib/members";
 import { supabase } from "@/lib/supabase";
+import { wantedProducts } from "@/lib/wanted";
 
 export const metadata: Metadata = { title: "Your rewards", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -43,6 +44,7 @@ export default async function MePage() {
       .limit(10),
   ]);
   const videos = canSubmit("video", member.tier);
+  const wanted = await wantedProducts();
 
   return (
     <main className="mx-auto max-w-md space-y-6 px-5 pb-20 pt-6 sm:px-8">
@@ -90,6 +92,23 @@ export default async function MePage() {
           </a>
         )}
       </section>
+
+      {wanted.length > 0 && (
+        <section className="space-y-3 rounded-3xl bg-white p-7 shadow-sm">
+          <div>
+            <h2 className="text-xl font-bold">Wanted next</h2>
+            <p className="text-[15px] text-[#3D4C42]">Spot one of these at the store? Scan it{videos ? " or send a video" : ""}.</p>
+          </div>
+          <ul className="divide-y divide-[#E6EAE4]">
+            {wanted.map((w) => (
+              <li key={w.id} className="flex items-center justify-between gap-3 py-3">
+                <span className="min-w-0 font-medium">{w.product}</span>
+                <span className="shrink-0 rounded-full bg-[#FFF4D6] px-2 py-0.5 text-[12px] font-bold text-[#7A5200]">{w.store}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {recent && recent.length > 0 && (
         <section className="space-y-3 rounded-3xl bg-white p-7 shadow-sm">

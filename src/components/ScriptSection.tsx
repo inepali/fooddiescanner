@@ -195,7 +195,11 @@ export default function ScriptSection({
       {initial?.next && !editing && (
         <div className="space-y-1 rounded-2xl bg-indigo-50 p-3 text-sm">
           <p className="text-xs font-medium uppercase tracking-wide text-indigo-700">Scan this next</p>
-          <p className="font-medium">{initial.next.product}</p>
+          <p className="font-medium">
+            {initial.next.product}
+            {initial.next.store && initial.next.store !== "Any" ? <span className="font-normal text-neutral-500"> · {initial.next.store}</span> : null}
+          </p>
+          {initial.next.targetId && <p className="text-xs text-indigo-700">From your Products list, now shown to contributors as Wanted next.</p>}
           {initial.next.why && <p className="text-neutral-600">{initial.next.why}</p>}
           {initial.next.teaser && <p className="text-xs text-neutral-500">Teased at the end of this video: &ldquo;{initial.next.teaser}&rdquo;</p>}
         </div>

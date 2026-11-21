@@ -4,6 +4,7 @@ import { createScript, offFactsLine, parseScript, parseTone, type VideoScript } 
 import { applyEdits } from "@/lib/script-edit";
 import { HttpError, handler, json, paramId } from "@/lib/http";
 import { latestVideo } from "@/lib/queries";
+import { candidatesFor, sameProduct, type Target } from "@/lib/targets";
 import { getMedia } from "@/lib/storage";
 import type { LlmImage } from "@/lib/llm";
 
@@ -63,6 +64,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .filter((r) => r.overall_score !== null)
     .map((r) => ({ name: r.product_name as string, score: r.overall_score as number }));
 
+  // The products-to-scan list: tick this product off, and offer its rivals as tomorrow's scan.
+  const { data: targetRows } = await db
+    .from("scan_targets")
+    .select("id, product, store, category, compare_group, priority, status, scan_id")
+    .limit(1000);
+  const targets = (targetRows ?? []) as Target[];
+  const name = (scan.product_name as string | null) ?? "";
+  const current = name ? (targets.find((t) => t.scan_id === id) ?? targets.find((t) => t.status !== "scanned" && sameProduct(name, t.product)) ?? null) : null;
+  if (current && current.status !== "scanned") {
+    await db.from("scan_targets").update({ status: "scanned", scan_id: id, updated_at: new Date().toISOString() }).eq("id", current.id);
+  }
+  const candidates = candidatesFor(targets, current);
+
   const { data: job } = await db
     .from("jobs")
     .insert({ scan_id: id, step: "script", status: "running" })
@@ -78,9 +92,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       photos,
       tone,
       recentScans,
+      targets: candidates,
       ingredients: (ings ?? []).map((i) => ({ name: i.raw_name, score: i.score, reason: i.reason })),
     });
 
+    // "T3" from the model → the list item's id, and that product becomes "Wanted next" for members.
+    if (script.next?.targetId) {
+      const pick = candidates.find((c) => c.ref === script.next?.targetId);
+      if (pick) {
+        script.next = { ...script.next, targetId: pick.id, product: pick.product, store: pick.store };
+        if (pick.status === "todo") {
+          await db.from("scan_targets").update({ status: "next", updated_at: new Date().toISOString() }).eq("id", pick.id);
+        }
+      } else {
+        delete script.next.targetId;
+      }
+    }
     await saveVersion(db, id, script);
 
     if (job) await db.from("jobs").update({ status: "done" }).eq("id", job.id);

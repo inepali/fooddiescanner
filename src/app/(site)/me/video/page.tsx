@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import MemberScan from "@/components/site/MemberScan";
+import { wantedProducts } from "@/lib/wanted";
 import { memberFromToken } from "@/lib/member-auth";
 import { canSubmit } from "@/lib/member-scan";
 import { MEMBER_ACCESS_COOKIE, MEMBER_REFRESH_COOKIE } from "@/lib/members";
@@ -17,7 +18,7 @@ export default async function MemberVideoPage() {
   if (!canSubmit("video", member.tier)) redirect("/me");
   return (
     <main className="mx-auto max-w-md px-5 pb-20 pt-6 sm:px-8">
-      <MemberScan kind="video" />
+      <MemberScan kind="video" wanted={await wantedProducts()} />
     </main>
   );
 }

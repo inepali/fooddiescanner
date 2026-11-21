@@ -56,3 +56,12 @@ test("parseScript reads tomorrow's scan and keeps it through a save", () => {
   assert.equal(parseScript(JSON.stringify(out)).next?.teaser, "Tomorrow: the marinara.");
   assert.equal(parseScript('{"title":"T","scenes":[{"seconds":4,"visual":"a","voiceover":"x"}],"next_scan":{"why":"no product"}}').next, undefined);
 });
+
+test("tomorrow's scan keeps its list id through a save, and reads a model ref", () => {
+  const id = "0b0f7a2e-1111-4a4a-9c9c-123456789abc";
+  const saved = parseScript(JSON.stringify({ title: "T", scenes: [{ seconds: 4, visual: "a", voiceover: "x" }], next: { product: "P", why: "", teaser: "", store: "Aldi", targetId: id } }));
+  assert.equal(saved.next?.targetId, id);
+  assert.equal(saved.next?.store, "Aldi");
+  const fromModel = parseScript('{"title":"T","scenes":[{"seconds":4,"visual":"a","voiceover":"x"}],"next_scan":{"target":"T4","product":"P","store":"Costco","why":"w","teaser":"t"}}');
+  assert.equal(fromModel.next?.targetId, "T4");
+});

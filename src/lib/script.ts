@@ -17,7 +17,7 @@ export const SECTIONS: Section[] = ["hook", "good", "fair", "poor", "outro"];
 /** `custom`: one of your saved lines (re-added on every take). `edited`: you changed it by hand, so code never rewrites it. */
 export type VideoScene = { seconds: number; visual: string; voiceover: string; photo?: number; section?: Section; custom?: boolean; edited?: boolean };
 /** The product the model suggests scanning next, so each video sets up the next one. */
-export type NextScan = { product: string; why: string; teaser: string };
+export type NextScan = { product: string; why: string; teaser: string; store?: string; /** Products-to-scan list item. */ targetId?: string };
 export type VideoScript = { title: string; scenes: VideoScene[]; next?: NextScan };
 
 export type ScriptInput = {
@@ -32,6 +32,8 @@ export type ScriptInput = {
   tone?: Tone;
   /** Recent scans (newest first), so the "scan this next" pick builds a series instead of repeating. */
   recentScans?: { name: string; score: number }[];
+  /** Products-to-scan list to pick tomorrow's scan from (ref T1, T2…; see targets.ts). */
+  targets?: { ref: string; product: string; store: string; compare_group: string | null; status: string }[];
 };
 
 export type Group = "good" | "fair" | "poor";
@@ -170,6 +172,10 @@ export function buildPrompt(i: ScriptInput, compact = false) {
     ? recent.map((r) => `${r.name} (${groupFor(r.score)})`).join("; ")
     : "(none yet)";
 
+  const targetList = (i.targets ?? [])
+    .map((t) => `- ${t.ref}: ${t.product} (${t.store}${t.compare_group ? `, group ${t.compare_group}` : ""}${t.status === "next" ? ", WANTED" : ""})`)
+    .join("\n");
+
   const longNote = long
     ? `\nLONG LABEL: this product lists ${i.ingredients.length} ingredients. Do NOT try to cover them all and do not deliberate over the rest: use only the ingredients listed in the two lists below, say once that the list is long (\"a very long ingredient list\"), and answer straight away with the JSON.\n`
     : "";
@@ -192,10 +198,14 @@ ${worstHeader} on this label, worst first:
 ${tagged(c.worst)}
 
 Return ONLY a JSON object (no markdown fences) shaped like:
-{ "title": string, "scenes": [ { "section": "hook" | "good" | "fair" | "poor" | "outro", "seconds": integer, "visual": string, "voiceover": string${photoCount ? ', "photo": integer' : ""} } ], "next_scan": { "product": string, "why": string, "teaser": string } }
+{ "title": string, "scenes": [ { "section": "hook" | "good" | "fair" | "poor" | "outro", "seconds": integer, "visual": string, "voiceover": string${photoCount ? ', "photo": integer' : ""} } ], "next_scan": { ${targetList ? '"target": string, ' : ""}"product": string, "store": string, "why": string, "teaser": string } }
 
 TOMORROW'S SCAN ("next_scan"): pick ONE real, widely sold packaged product to scan next, so the videos connect like a series and people follow for the next episode. Already scanned (newest first; never pick one of these): ${recentLine}.
-- Connect the dots: a head-to-head with this product (the store brand vs the name brand, the "healthy" version vs the regular one, the kids' version, the same category from another aisle), or the next step in a running theme. Prefer products people argue about or buy every week.
+${
+    targetList
+      ? `- PICK FROM THIS PRODUCTS-TO-SCAN LIST whenever one connects (set "target" to its ref, e.g. "T3", and copy its product and store). Same group = a direct rival of this product; WANTED = the admin wants it soon. Only if nothing fits, suggest another product and set "target" to "".\n${targetList}\n`
+      : ""
+  }- Connect the dots: a head-to-head with this product (the store brand vs the name brand, the "healthy" version vs the regular one, the kids' version, the same category from another aisle), or the next step in a running theme. Prefer products people argue about or buy every week.
 - "product": the product name as it appears in the shop (brand + product). "why": one sentence for the admin on why it connects. "teaser": one short spoken line, 12 words or fewer, that names the matchup, e.g. "Tomorrow: the store brand. Is it any better?"
 - Never claim what tomorrow's score will be.
 
@@ -285,7 +295,12 @@ function parseNext(v: unknown): NextScan | null {
   const str = (x: unknown, max: number) => (typeof x === "string" ? x.replace(/\s+/g, " ").trim().slice(0, max) : "");
   const product = str(o.product, 120);
   if (!product) return null;
-  return { product, why: str(o.why, 300), teaser: str(o.teaser, 160) };
+  const store = str(o.store, 40);
+  // From the model: "target": "T3" (the route maps it to the list item's id). From a saved script: "targetId": uuid.
+  const saved = typeof o.targetId === "string" && /^[0-9a-f-]{36}$/i.test(o.targetId) ? o.targetId : "";
+  const ref = /^T\d{1,3}$/.test(str(o.target, 5)) ? str(o.target, 5) : "";
+  const targetId = saved || ref;
+  return { product, why: str(o.why, 300), teaser: str(o.teaser, 160), ...(store ? { store } : {}), ...(targetId ? { targetId } : {}) };
 }
 
 const CTA = "Comment your answer.";

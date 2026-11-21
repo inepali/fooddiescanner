@@ -85,3 +85,15 @@ test("rewards: label 10, product photo 20, video 1000", () => {
   assert.equal(submissionPoints("video"), 1020);
   assert.equal(formatPoints(1020), "1,020");
 });
+
+import { clipLengthProblem, videoTotalProblem, MAX_MEMBER_VIDEOS } from "./member-scan.ts";
+
+test("clips: each 3-75 s, up to five, about a minute in total", () => {
+  assert.equal(clipLengthProblem(12), null);
+  assert.match(clipLengthProblem(1) ?? "", /under 3 s/);
+  assert.match(clipLengthProblem(90) ?? "", /75 s or less/);
+  assert.equal(videoTotalProblem([20, 15, 15]), null);
+  assert.match(videoTotalProblem([20, 10]) ?? "", /add up to 30 s/);
+  assert.match(videoTotalProblem([]) ?? "", /Add your video/);
+  assert.match(videoTotalProblem(Array(MAX_MEMBER_VIDEOS + 1).fill(20)) ?? "", /Up to 5/);
+});

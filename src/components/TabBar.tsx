@@ -5,12 +5,13 @@ import { usePathname } from "next/navigation";
 
 const icon = "h-7 w-7";
 
-/** Phone-only bottom tab bar for the top-level screens (like iOS): Scan, History and Review. */
+/** Phone-only bottom tab bar for the top-level screens (like iOS): Scan, History, Products and Review. */
 export default function TabBar() {
   const path = usePathname() ?? "";
   const onHistory = path.startsWith("/history");
   const onScan = path === "/scan" || path.startsWith("/new");
   const onReview = path.startsWith("/review") || path.startsWith("/invites");
+  const onProducts = path.startsWith("/products");
   const item = (active: boolean) =>
     `flex flex-1 flex-col items-center gap-0.5 pt-1.5 text-[10px] font-medium ${active ? "text-accent" : "text-neutral-500"}`;
   return (
@@ -31,6 +32,13 @@ export default function TabBar() {
           <path d="M12 7.5V12l3 2" />
         </svg>
         History
+      </Link>
+      <Link href="/products" className={item(onProducts)} aria-current={onProducts ? "page" : undefined}>
+        <svg viewBox="0 0 24 24" className={icon} fill="none" stroke="currentColor" strokeWidth={onProducts ? 2.2 : 1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M9 6h11M9 12h11M9 18h11" />
+          <path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" />
+        </svg>
+        Products
       </Link>
       <Link href="/review" className={item(onReview)} aria-current={onReview ? "page" : undefined}>
         <svg viewBox="0 0 24 24" className={icon} fill="none" stroke="currentColor" strokeWidth={onReview ? 2.2 : 1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>

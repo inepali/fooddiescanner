@@ -45,7 +45,7 @@ export default async function ReviewPage({ searchParams }: Props) {
   const creatorIds = [...new Set(rows.map((r) => r.creator_id))];
   const [{ data: media }, { data: creators }, { count: pendingCount }] = await Promise.all([
     ids.length
-      ? db.from("scan_media").select("scan_id, kind, storage_path, duration_s").in("scan_id", ids).in("kind", ["label", "product_image", "product_video"])
+      ? db.from("scan_media").select("scan_id, kind, storage_path, duration_s, sort_order").in("scan_id", ids).in("kind", ["label", "product_image", "product_video"]).order("sort_order")
       : Promise.resolve({ data: [] as { scan_id: string; kind: string; storage_path: string; duration_s: number | null }[] }),
     creatorIds.length
       ? db.from("creators").select("id, handle, tiktok_handle, tier").in("id", creatorIds)
@@ -53,14 +53,14 @@ export default async function ReviewPage({ searchParams }: Props) {
     db.from("scans").select("id", { count: "exact", head: true }).eq("review_status", "pending"),
   ]);
   const who = new Map((creators ?? []).map((c) => [c.id, c]));
-  const files = new Map<string, { label?: string; product?: string; video?: string; seconds?: number | null }>();
+  const files = new Map<string, { label?: string; product?: string; videos?: { url: string; order: number }[]; seconds?: number | null }>();
   await Promise.all(
     (media ?? []).map(async (m) => {
       const f = files.get(m.scan_id) ?? {};
       files.set(m.scan_id, f);
       if (m.kind === "product_video") {
-        f.video = await mediaUrl("videos", m.storage_path, 3600);
-        f.seconds = m.duration_s;
+        (f.videos ??= []).push({ url: await mediaUrl("videos", m.storage_path, 3600), order: (m.sort_order as number) ?? 0 });
+        f.seconds = (f.seconds ?? 0) + (Number(m.duration_s) || 0);
       } else {
         const url = await mediaUrl("images", m.storage_path, 3600);
         if (m.kind === "label") f.label = url;
@@ -112,12 +112,18 @@ export default async function ReviewPage({ searchParams }: Props) {
                 </div>
                 {r.overall_score !== null && <span className="text-2xl font-bold tabular-nums">{r.overall_score}</span>}
               </header>
-              {f.video && (
-                <video src={f.video} controls playsInline preload="metadata" className="aspect-[9/16] max-h-[70vh] w-full rounded-xl bg-black object-contain">
-                  <track kind="captions" />
-                </video>
+              {f.videos && f.videos.length > 0 && (
+                <div className={f.videos.length > 1 ? "grid grid-cols-2 gap-2" : ""}>
+                  {[...f.videos].sort((a, b) => a.order - b.order).map((v, i) => (
+                    <video key={v.url} src={v.url} controls playsInline preload="metadata" aria-label={`Clip ${i + 1}`} className="aspect-[9/16] max-h-[70vh] w-full rounded-xl bg-black object-contain">
+                      <track kind="captions" />
+                    </video>
+                  ))}
+                </div>
               )}
-              <p className="text-sm text-neutral-500">{f.seconds ? `Video: ${Math.round(f.seconds)} s` : "No video"}</p>
+              <p className="text-sm text-neutral-500">
+                {f.seconds ? `Video: ${Math.round(f.seconds)} s${f.videos && f.videos.length > 1 ? ` in ${f.videos.length} clips` : ""}` : "No video"}
+              </p>
               <div className="grid grid-cols-2 gap-2">
                 {[f.label && { src: f.label, alt: "Ingredient label" }, f.product && { src: f.product, alt: "Product" }]
                   .filter((x): x is { src: string; alt: string } => Boolean(x))
