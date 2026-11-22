@@ -1,5 +1,6 @@
 import { generateText, TOO_LONG, type LlmImage } from "./llm.ts";
 import { DEFAULT_TONE, TONES, parseTone, type Tone } from "./tones.ts";
+import { WORDING_RULES, describeHits, dropRiskySentences, riskyTerms, safeReason } from "./wording.ts";
 
 export { DEFAULT_TONE, TONES, parseTone, type Tone };
 
@@ -105,12 +106,12 @@ export function pickCandidates(ings: ScriptInput["ingredients"]): Record<Group, 
 /** A starting point for the hook: the surprise, never "I'll show you the five best and five worst". */
 function concerningHook(overall: number): string {
   return overall >= 60
-    ? `"Everyone says skip this one. The label says otherwise."`
+    ? `"You might expect a low score here. Let's read the label."`
     : `"Looks healthy, right? Read the second ingredient."`;
 }
 
 function overallFeel(overall: number): string {
-  return overall >= 70 ? "mostly on the good side" : overall >= 45 ? "a mixed bag" : "mostly on the concerning side";
+  return overall >= 70 ? "mostly on the good side" : overall >= 45 ? "a mixed bag" : "mostly on the lower-scoring side";
 }
 
 /** About 2.5 spoken words per second: 60 seconds is roughly 145 words. */
@@ -132,12 +133,12 @@ export function buildPrompt(i: ScriptInput, compact = false) {
   const lines = (list: Candidate[]) =>
     list.length === 0
       ? "(none)"
-      : list.map((x) => `- ${x.name} (#${x.position} on the label)${x.reason ? `: ${x.reason}` : ""}`).join("\n");
+      : list.map((x) => `- ${x.name} (#${x.position} on the label)${safeReason(x.reason) ? `: ${safeReason(x.reason)}` : ""}`).join("\n");
 
   const tagged = (list: (Candidate & { group: Group })[]) =>
     list.length === 0
       ? "(none)"
-      : list.map((x) => `- ${x.name} [${x.group}] (#${x.position} on the label)${x.reason ? `: ${x.reason.slice(0, 160)}` : ""}`).join("\n");
+      : list.map((x) => `- ${x.name} [${x.group}] (#${x.position} on the label)${safeReason(x.reason) ? `: ${safeReason(x.reason)!.slice(0, 160)}` : ""}`).join("\n");
   const concerning = i.overall < 60;
 
   // The video covers as many best/worst ingredients as the label really has (five each at most).
@@ -145,27 +146,27 @@ export function buildPrompt(i: ScriptInput, compact = false) {
   const nw = c.worst.length;
   const B = countWord(nb);
   const W = countWord(nw);
-  const best = nb === 1 ? "the best ingredient" : `the ${B} best ingredients`;
-  const worst = nw === 1 ? "the worst ingredient" : `the ${W} worst ingredients`;
+  const best = nb === 1 ? "the highest-scoring ingredient" : `the ${B} highest-scoring ingredients`;
+  const worst = nw === 1 ? "the lowest-scoring ingredient" : `the ${W} lowest-scoring ingredients`;
   const short = nb < LIST_SIZE || nw < LIST_SIZE;
   const fewIngredients = nb + nw <= 4;
   const shortNote = short
-    ? `\nCOUNTS FOR THIS LABEL: this video covers ${nb === 0 ? "NO best ingredients" : best} and ${nw === 0 ? "NO worst ingredients" : worst}, NOT five and five. ${nw === 0 ? "Nothing on this label is fair or poor, so there is nothing to warn about: never say \"worst\", \"worse\" or \"I'd worry about\", and never invent a concern. " : ""}${nb === 0 ? "Nothing on this label is on the good side: never invent a benefit. " : ""}Use exactly these numbers everywhere (hook, teasers, transitions, countdown). Never say "five" or any other count that does not match the two lists below, and never call the same ingredient both good and bad.${fewIngredients ? ` With so few ingredients to cover, spend more time on each one (what it is, why it is in there, where it sits on the label) to fill the minute${i.ingredients.length <= 3 ? ", and say that a short ingredient list is itself worth noticing" : ""}.` : ""}\n`
+    ? `\nCOUNTS FOR THIS LABEL: this video covers ${nb === 0 ? "NO highest-scoring (good) ingredients" : best} and ${nw === 0 ? "NO lower-scoring ingredients" : worst}, NOT five and five. ${nw === 0 ? "Nothing on this label is fair or poor, so there is nothing to warn about: never say \"lowest-scoring\", \"scored lowest\" or \"worse\", and never invent a concern. " : ""}${nb === 0 ? "Nothing on this label is on the good side: never invent a benefit. " : ""}Use exactly these numbers everywhere (hook, teasers, transitions, countdown). Never say "five" or any other count that does not match the two lists below, and never call the same ingredient both good and bad.${fewIngredients ? ` With so few ingredients to cover, spend more time on each one (what it is, why it is in there, where it sits on the label) to fill the minute${i.ingredients.length <= 3 ? ", and say that a short ingredient list is itself worth noticing" : ""}.` : ""}\n`
     : "";
-  const bestHeader = nb === 0 ? "THE BEST ingredients" : nb === 1 ? "THE BEST ingredient" : `THE ${B.toUpperCase()} BEST ingredients`;
-  const worstHeader = nw === 0 ? "THE WORST ingredients" : nw === 1 ? "THE WORST ingredient" : `THE ${W.toUpperCase()} WORST ingredients`;
+  const bestHeader = nb === 0 ? "THE HIGHEST-SCORING ingredients" : nb === 1 ? "THE HIGHEST-SCORING ingredient" : `THE ${B.toUpperCase()} HIGHEST-SCORING ingredients`;
+  const worstHeader = nw === 0 ? "THE LOWEST-SCORING ingredients" : nw === 1 ? "THE LOWEST-SCORING ingredient" : `THE ${W.toUpperCase()} LOWEST-SCORING ingredients`;
   const hookExample =
     nw === 0
-      ? `"Is ${i.productName ? "this" : "this product"} actually healthy? ${nb === 1 ? "One" : B[0].toUpperCase() + B.slice(1)} ingredient${nb === 1 ? "" : "s"}. That's it."`
+      ? `"What's in ${i.productName ? "this" : "this product"}? ${nb === 1 ? "One" : B[0].toUpperCase() + B.slice(1)} ingredient${nb === 1 ? "" : "s"}. That's it."`
       : concerningHook(i.overall);
   const goodStep =
     nb === 0
       ? `2. "good": skip this section (no ingredient here is on the good side); say so in one honest line inside the hook or the first "poor" scene.`
-      : `2. "good" (${nb <= 2 ? "1 scene" : "2 scenes"}): ${best.toUpperCase()}, best first, ${nb <= 2 ? "two or three short lines each" : "one short line each (about 10 to 12 words)"}: its name and one health benefit in plain words ("may support digestion", "a source of protein"). If an ingredient has nothing good to say about it, say it is simply harmless. ${nw === 0 ? "" : `End this part by asking viewers to stay, using the real count: "Now ${nw === 1 ? "the one" : `the ${W}`} I'd worry about. Stay to the end."`}`;
+      : `2. "good" (${nb <= 2 ? "1 scene" : "2 scenes"}): ${best.toUpperCase()}, highest first, ${nb <= 2 ? "two or three short lines each" : "one short line each (about 10 to 12 words)"}: its name, what it is, and one nutrition plus in plain words ("a source of fiber", "a source of protein", "a whole grain"). If an ingredient has nothing special about it, say it is a simple, common ingredient. ${nw === 0 ? "" : `End this part by asking viewers to stay, using the real count: "Now ${nw === 1 ? "the one" : `the ${W}`} that scored lowest. Stay to the end."`}`;
   const poorStep =
     nw === 0
       ? `3. "poor": skip this section. Nothing on this label needs a warning: say so with relief in the outro instead of inventing a concern.`
-      : `3. "poor" (${nw <= 2 ? "1 or 2 scenes" : "2 or 3 scenes"}): ${worst.toUpperCase()}${nw > 1 ? `, saving the very worst for last (count down from number ${nw} to the worst)` : ""}. For each, explain in plain words the widely discussed nutrition concern about that ingredient (for example added sugar, a refined oil, a heavily processed additive) and why people pay attention to it. Say "may" where the science is not settled. Talk about the ingredient, never the company.`;
+      : `3. "poor" (${nw <= 2 ? "1 or 2 scenes" : "2 or 3 scenes"}): ${worst.toUpperCase()}${nw > 1 ? `, saving the lowest score for last (count down from number ${nw} to the lowest)` : ""}. For each, be informative: what the ingredient is in plain words, what it does in this product (sweetener, thickener, emulsifier, preservative, color, flavor), where it sits on the label, and why our rubric scores it lower (for example "it's an added sugar, and dietary guidelines suggest limiting those", "a refined oil", "a highly processed additive"). Say "may" where the science is not settled. Talk about the ingredient, never the company.`;
 
   const recent = (i.recentScans ?? []).slice(0, 15);
   const recentLine = recent.length
@@ -180,7 +181,7 @@ export function buildPrompt(i: ScriptInput, compact = false) {
     ? `\nLONG LABEL: this product lists ${i.ingredients.length} ingredients. Do NOT try to cover them all and do not deliberate over the rest: use only the ingredients listed in the two lists below, say once that the list is long (\"a very long ingredient list\"), and answer straight away with the JSON.\n`
     : "";
 
-  return `You write 60-second vertical (9:16) videos for TikTok and Instagram Reels that read a packaged food's ingredient label out loud and explain what it means for your health. You never say or show any numeric score.
+  return `You write 60-second vertical (9:16) educational videos for TikTok and Instagram Reels that read a packaged food's ingredient label out loud and explain, in plain words, what each ingredient is, why it's there and how our nutrition rubric sees it. You never say or show any numeric score.
 
 TONE: ${tone.prompt}
 
@@ -191,10 +192,10 @@ FACTS
 - Allergens on the label: ${i.allergens.join(", ") || "none stated"}
 - Ingredients on the label: ${i.ingredients.length} (${c.counts.good} good, ${c.counts.fair} fair, ${c.counts.poor} poor)
 ${i.offFacts ? `- Open Food Facts says: ${i.offFacts}. Use only as supporting evidence inside the good or poor section (for example, NOVA group 4 means ultra-processed), never as the headline. Say each of these by name exactly once, in the section where it fits (for example \"Nutri-Score D\", \"NOVA group 4\", \"Green-Score B\"), because the video shows a badge for it the moment you say it.\n` : ""}
-${bestHeader} on this label, best first (group in brackets; never say the group or any number out loud):
+${bestHeader} on this label, highest first (group in brackets; never say the group or any number out loud):
 ${tagged(c.best)}
 
-${worstHeader} on this label, worst first:
+${worstHeader} on this label, lowest first:
 ${tagged(c.worst)}
 
 Return ONLY a JSON object (no markdown fences) shaped like:
@@ -209,22 +210,22 @@ ${
 - "product": the product name as it appears in the shop (brand + product). "why": one sentence for the admin on why it connects. "teaser": one short spoken line, 12 words or fewer, that names the matchup, e.g. "Tomorrow: the store brand. Is it any better?"
 - Never claim what tomorrow's score will be.
 
-STORY PLAN: "${nb === 0 ? "no best" : best} first, ${nw === 0 ? "no worst" : worst} last". ${nb === 0 ? "" : `Name ${best} first`}${nb > 0 && nw > 0 ? `, then ask viewers to stay until you reveal ${worst}.` : nw > 0 ? `Reveal ${worst}.` : "."} ${
+STORY PLAN: "${nb === 0 ? "no highest-scoring" : best} first, ${nw === 0 ? "no lowest-scoring" : worst} last". ${nb === 0 ? "" : `Name ${best} first`}${nb > 0 && nw > 0 ? `, then ask viewers to stay until you reveal ${worst}.` : nw > 0 ? `Reveal ${worst}.` : "."} ${
     concerning
       ? "VERDICT FOR THIS PRODUCT: it lands on the lower side of the ingredient scale. Say plainly, near the end, that in your view this ingredient list lands on the lower side and may be one to enjoy now and then rather than every day. Frame it as your opinion of the label (\"in my book\", \"for me\"), use \"may\" and \"can\", never state a medical fact the facts above do not support, and never call the product or any ingredient unsafe, harmful, toxic or poison."
-      : `VERDICT FOR THIS PRODUCT: it is mostly good. Say so honestly, and let ${nb === 0 ? "the good news" : best} get a little more time.${nw === 0 ? " There is nothing to warn about on this label, so say that with relief and give the good ingredients the full minute." : " Then, for the worst ingredients listed above (all of them are fair or poor), give extra detail: for each one, say what it is, why it is there, and the specific health concern, in two short sentences instead of one."}`
+      : `VERDICT FOR THIS PRODUCT: it is mostly good. Say so honestly, and let ${nb === 0 ? "the good news" : best} get a little more time.${nw === 0 ? " There is nothing to warn about on this label, so say that with relief and give the good ingredients the full minute." : " Then, for the lowest-scoring ingredients listed above (all of them are fair or poor), give extra detail: for each one, say what it is, why it is there, and why our rubric scores it lower, in two short sentences instead of one."}`
   }
 
 STRUCTURE (in this order, 7 to 9 scenes, "seconds" adding up to about 60; the retention hooks below are woven into these scenes, they are not extra scenes):
-1. "hook" (about 4 s): the most surprising TRUE thing about this label, said in the first two seconds, for example ${hookExample} The first sentence is 10 words or fewer and creates a curiosity gap or a contradiction about THIS product (see MAKE IT WORTH WATCHING). Within the first five seconds, say the product type in the plain words people type into search ("Is this cereal healthy?", "what's really in Oreos"), because TikTok search reads the speech. Never open by announcing the format or the counts ("I'll show you the five best and five worst"): that is the line viewers scroll past. Do not mention a score.
+1. "hook" (about 4 s): the most surprising TRUE thing about this label, said in the first two seconds, for example ${hookExample} The first sentence is 10 words or fewer and creates a curiosity gap or a contradiction about THIS product (see MAKE IT WORTH WATCHING). Within the first five seconds, say the product type in the plain words people type into search ("Is this cereal healthy?", "Oreo ingredients"), because TikTok search reads the speech. Never open by announcing the format or the counts ("I'll show you the five highest and five lowest"): that is the line viewers scroll past. Do not mention a score.
 ${goodStep}
 ${poorStep}
 4. "outro" (about 8 s): the verdict in words (no number), then a "Try this instead" tip: tell people what to look for in a better version of this kind of product, as concrete label rules they can check in the shop ("look for one with five ingredients or fewer and no added sugar"). Name no brands and invent no numbers beyond simple label rules. Include one short, quotable "send this to someone who…" line. Then the "next_scan" teaser, word for word, followed by "Follow so you don't miss it." Then finish with a short question that invites comments, such as "Do you eat this?", and one last short call to action: "Comment your answer." The video MUST end with that question followed by that call to action.
 Do not use a "fair" scene. Cover exactly the ingredients in the two lists above, no more and no fewer, and use their real counts.
 
 KEEP PEOPLE WATCHING (retention hooks). Viewers tend to drop off around 10-15 seconds, so plant three hooks. Count time at about 2.5 spoken words per second:
-- Hook at about 0:15: the last sentence of the scene that ends near the 15-second mark is an open-loop teaser that makes people stay for what comes next, for example "But wait until you hear what's hiding in the next one." Name no ingredient and no number in the teaser itself.
-- Hook at about 0:35: the last sentence of the scene that ends near the 35-second mark is a second, stronger teaser pointing at the most concerning ingredient, which you save for after this point (put the very worst one in the final stretch). If nothing on the label is concerning, tease the one thing that surprised you.
+- Hook at about 0:15: the last sentence of the scene that ends near the 15-second mark is an open-loop teaser that makes people stay for what comes next, for example "The next one is the one most people don't know." Name no ingredient and no number in the teaser itself.
+- Hook at about 0:35: the last sentence of the scene that ends near the 35-second mark is a second, stronger teaser pointing at the lowest-scoring ingredient, which you save for after this point (put the lowest score in the final stretch), for example "The lowest score is coming up next." If nothing on the label scores low, tease the one thing that surprised you.
 - Closing hook: end the "outro" with the takeaway, the "Try this instead" tip, tomorrow's teaser with "Follow so you don't miss it.", the final question and the comment call to action from rule 4.
 Pay each teaser off within the next 10-20 seconds. A teaser must never promise something the video does not deliver, and must not be clickbait, a scare tactic or a numeric score. Plan the scene lengths so a scene boundary lands near 0:15 and near 0:35.
 MAKE IT WORTH WATCHING AND SHARING (story craft). Treat the label like a short mystery with a reveal, not a list:
@@ -233,7 +234,7 @@ MAKE IT WORTH WATCHING AND SHARING (story craft). Treat the label like a short m
 - Use label order as drama: ingredients are listed from most to least, so where an ingredient sits is a real, checkable fact ("Sugar is number two. Ingredients are listed by amount, so that's a lot.").
 - One vivid comparison per video, qualitative only ("reads more like a dessert recipe than breakfast"). No made-up numbers, statistics or studies.
 - Rhythm: short punchy sentences, mostly 10 words or fewer, with a beat of contrast ("Looks healthy. Reads differently."). Speak to "you". Strong verbs. No filler, no throat-clearing, no repeating the product name more than twice.
-- Build tension: save the most surprising or most concerning ingredient for the final stretch, then pay it off clearly. Give the good news honestly too, so people trust you.
+- Build tension: save the most surprising or lowest-scoring ingredient for the final stretch, then pay it off clearly. Give the good news honestly too, so people trust you.
 - Feel, don't scare: aim for "wait, really?" and "I'm sending this to my mum", never fear or shame. Stay truthful: a shareable video is one people can fact-check.
 - "title": a short, curiosity-driven title (under 60 characters) that promises something this video delivers.
 
@@ -254,9 +255,9 @@ RULES
 - Only talk about ingredients listed above. Do not invent ingredients, numbers or studies.
 - Health statements must be widely accepted nutrition basics, phrased with "may", "can" or "tends to", and consistent with the note shown for that ingredient. If you are not sure a benefit or concern is well established, leave that ingredient out.
 - No disease claims, no "cures", "treats", "prevents", "detox" or weight-loss promises, and no scare tactics. Do not shame people for eating it.
-- OPINION, NOT FACT: the verdict and every "best" or "worst" call is your opinion of the ingredient list ("I'd", "in my book", "by my read"), not a fact about the product. Never say or suggest a product is unsafe, dangerous, harmful, toxic, illegal, banned, contaminated or mislabeled.
-- TALK ABOUT INGREDIENTS, NOT THE COMPANY: never say or suggest a brand is lying, misleading, hiding, tricking, cheating or doesn't care about people. Describe front-of-pack claims neutrally ("the front says 'natural'; here's the ingredient list") and let viewers decide.
-- Never tell viewers to stop buying, boycott or throw out a specific product. The "Try this instead" tip stays about label rules, never a brand.`;
+- Never say or suggest a product is contaminated or mislabeled, or that a brand is cheating or doesn't care about people.
+
+${WORDING_RULES}`;
 }
 
 export function parseScript(text: string): VideoScript {
@@ -336,15 +337,15 @@ const COUNT_WORDS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4,
 export function wrongCount(script: VideoScript, best: number, worst: number): string | null {
   const text = narration(script).toLowerCase();
   const said = (kind: "best" | "worst") => {
-    const words = kind === "best" ? "best|healthiest" : "worst|worse";
-    const re = new RegExp(`\\b(one|two|three|four|five|six|seven|eight|nine|ten|\\d+)\\s+(?:(?:${words})\\b${kind === "worst" ? "|(?:(?:ingredients?|things?|ones?)\\s+)?(?:i'?d|to)\\s+worry" : ""})`, "g");
+    const words = kind === "best" ? BEST_WORDS : WORST_WORDS;
+    const re = new RegExp(`\\b(one|two|three|four|five|six|seven|eight|nine|ten|\\d+)\\s+(?:(?:${words})\\b${kind === "worst" ? WORRY_ALT : ""})`, "g");
     return [...text.matchAll(re)].map((m) => COUNT_WORDS[m[1]] ?? Number(m[1]));
   };
   const badBest = said("best").find((n) => n !== best);
   if (badBest !== undefined) return `it says ${badBest} best, but there ${best === 1 ? "is" : "are"} ${best === 0 ? "none" : best}.`;
   const badWorst = said("worst").find((n) => n !== worst);
   if (badWorst !== undefined) return `it says ${badWorst} worst, but there ${worst === 1 ? "is" : "are"} ${worst === 0 ? "none" : worst}.`;
-  if (worst === 0 && /\b(the worst|worst ones?|i'?d worry about)\b/.test(text)) return "it talks about worst ingredients, but nothing on this label is fair or poor.";
+  if (worst === 0 && /\b(the worst|worst ones?|i'?d worry about|that scored lowest)\b/.test(text)) return "it talks about worst ingredients, but nothing on this label is fair or poor.";
   return null;
 }
 
@@ -355,8 +356,12 @@ export function labelCounts(ings: ScriptInput["ingredients"]): { best: number; w
 }
 
 const NUM = "one|two|three|four|five|six|seven|eight|nine|ten|\\d+";
-const WORRY_TALK = /\b(i'?d worry|to worry about|worst|worse|stay to the end|stay till the end|stick around for the bad|what's hiding|wait (?:until|till) you hear)\b/i;
-const NOTHING_TO_WORRY = /\b(nothing|no)\b[^.!?]*\b(worry|worst|worse|concern)/i;
+/** Spoken words for the two lists: older scripts said "best"/"worst", new ones "highest-scoring"/"lowest-scoring". */
+const BEST_WORDS = "best|healthiest|highest[- ]scoring";
+const WORST_WORDS = "worst|worse|lowest[- ]scoring|lower[- ]scoring";
+const WORRY_ALT = "|(?:(?:ingredients?|things?|ones?)\\s+)?(?:(?:i'?d|to)\\s+worry|that\\s+scored\\s+lowest)";
+const WORRY_TALK = /\b(i'?d worry|to worry about|worst|worse|lowest[- ]scoring|scored lowest|lowest score|stay to the end|stay till the end|stick around for the bad|what's hiding|wait (?:until|till) you hear)\b/i;
+const NOTHING_TO_WORRY = /\b(nothing|no)\b[^.!?]*\b(worry|worst|worse|concern|low)/i;
 
 /**
  * Code-level safety net for the counts, run on every new script and again before each voice take
@@ -368,7 +373,7 @@ const NOTHING_TO_WORRY = /\b(nothing|no)\b[^.!?]*\b(worry|worst|worse|concern)/i
 export function fixCounts(script: VideoScript, best: number, worst: number): VideoScript {
   const swap = (text: string, nouns: string, n: number, worry: boolean) =>
     text.replace(
-      new RegExp(`\\b(${NUM})(\\s+(?:(?:${nouns})\\b${worry ? "|(?:(?:ingredients?|things?|ones?)\\s+)?(?:i'?d|to)\\s+worry" : ""}))`, "gi"),
+      new RegExp(`\\b(${NUM})(\\s+(?:(?:${nouns})\\b${worry ? WORRY_ALT : ""}))`, "gi"),
       (m, num: string, rest: string) => {
         const word = countWord(n);
         const out = num[0] === num[0].toUpperCase() && /[a-z]/i.test(num) ? word[0].toUpperCase() + word.slice(1) : word;
@@ -386,13 +391,38 @@ export function fixCounts(script: VideoScript, best: number, worst: number): Vid
       const sentences = text.match(/[^.!?]+[.!?]+["')\]]*\s*|[^.!?]+$/g) ?? [text];
       text = sentences.filter((x) => !WORRY_TALK.test(x) || NOTHING_TO_WORRY.test(x)).join("").trim();
     } else {
-      text = swap(text, "worst|worse", worst, true);
+      text = swap(text, WORST_WORDS, worst, true);
     }
-    if (best > 0) text = swap(text, "best|healthiest", best, false);
+    if (best > 0) text = swap(text, BEST_WORDS, best, false);
     if (!text.trim()) continue; // a scene that was only "worst" talk is dropped
     scenes.push({ ...sc, voiceover: text.trim() });
   }
   return scenes.length ? { ...script, scenes } : script;
+}
+
+/** Risky phrases in the lines the model wrote (your own custom or hand-edited lines are not checked). */
+export function scriptRisks(script: VideoScript) {
+  const own = script.scenes.filter((s) => !s.custom && !s.edited).map((s) => s.voiceover);
+  return riskyTerms([script.title, ...own].join(" "));
+}
+
+/**
+ * Last-resort legal safety net, run on every new script and before each voice take (so older saved
+ * scripts are cleaned too): drops any sentence with a risky phrase from the model's lines and
+ * replaces a risky title. Your own custom and hand-edited lines are left alone.
+ */
+export function scrubScript(script: VideoScript): VideoScript {
+  const scenes: VideoScene[] = [];
+  for (const sc of script.scenes) {
+    if (sc.custom || sc.edited || riskyTerms(sc.voiceover).length === 0) {
+      scenes.push(sc);
+      continue;
+    }
+    const text = dropRiskySentences(sc.voiceover);
+    if (text) scenes.push({ ...sc, voiceover: text });
+  }
+  const title = riskyTerms(script.title).length ? "Ingredient check" : script.title;
+  return scenes.length ? { ...script, title, scenes } : { ...script, title };
 }
 
 export async function createScript(input: ScriptInput): Promise<VideoScript> {
@@ -427,6 +457,15 @@ export async function createScript(input: ScriptInput): Promise<VideoScript> {
       }
       continue;
     }
+    const risks = scriptRisks(script);
+    if (risks.length) {
+      // Legal wording beats everything else: retry with the exact phrases to fix, and on the last try strip them.
+      if (attempt < 2) {
+        prompt = `${compactPrompt ? buildPrompt(input, true) : base}\n\nYour previous draft used wording we can't publish about a named product: ${describeHits(risks)}. Rewrite it following the WORDING RULES, keeping it just as informative.`;
+        continue;
+      }
+      script = ensureHook(scrubScript(script));
+    }
     const words = wordCount(script);
     const countError = wrongCount(script, counts.best, counts.worst);
     if (!countError && words >= MIN_WORDS && words <= MAX_WORDS) return script;
@@ -442,7 +481,7 @@ export async function createScript(input: ScriptInput): Promise<VideoScript> {
 
 Your previous draft had ${words} words, which is ${words > MAX_WORDS ? "too long" : "too short"} for a 1-minute video. Rewrite it with between ${MIN_WORDS} and ${MAX_WORDS} words total (aim for 145).`;
   }
-  if (best) return best;
+  if (best) return ensureHook(scrubScript(best));
   throw new Error("Could not write the script.");
 }
 

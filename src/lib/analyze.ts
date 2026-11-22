@@ -1,6 +1,7 @@
 // Reads an ingredient-label photo with Claude and returns structured JSON.
 // Uses plain fetch so there is no SDK dependency.
 
+import { safeReason } from "./wording.ts";
 import { generateText } from "./llm.ts";
 
 export type AnalyzedIngredient = {
@@ -45,7 +46,7 @@ Field rules:
 - raw_name: the ingredient as printed, without percentages or parenthetical detail.
 - canonical_name: the plain lowercase common name (for example "cane sugar" for "Organic Evaporated Cane Juice").
 - provisional_score: 0-100 where 100 is healthiest. Guide: 80-100 whole or minimally processed foods (vegetables, legumes, whole grains, nuts, water); 60-79 lightly processed (olive oil, spices, vinegar, dairy); 40-59 refined or neutral (refined flour, salt, natural flavors); 20-39 added sugars, refined seed oils, many additives; 0-19 partially hydrogenated oils, some synthetic dyes and preservatives.
-- reason: one short factual sentence (max 20 words) about the ingredient's nutrition or processing. Describe the ingredient, never the brand or product. Do not make medical or disease claims, and never use words like toxic, poison, dangerous, harmful, unsafe or banned.
+- reason: one short, neutral, informative sentence (max 20 words): what the ingredient is, what it does in food (sweetener, thickener, emulsifier, preservative, color, flavor, fortification) and, if relevant, one widely accepted nutrition point ("an added sugar", "adds sodium", "a refined starch with little fiber"). Describe the ingredient, never the brand or product. No medical, disease or safety claims, and never use: toxic, harmful, dangerous, unsafe, poison, banned, restricted, linked to, causes, petroleum-derived, chemically altered, undisclosed, hidden, junk, avoid. For flavors, say "a flavoring blend; the label doesn't list its components"; for synthetic colors, say "a synthetic color additive, used for appearance".
 - allergens: allergens stated on the label (for example "milk", "wheat"), lowercase. Empty array if none.
 
 Rules: list sub-ingredients of compound ingredients as their own entries right after the parent's position, keeping label order. Never invent ingredients. Skip anything you cannot read.`;
@@ -158,7 +159,8 @@ export function parseAnalysis(text: string): LabelAnalysis {
         : raw;
     const n = Number(o.provisional_score);
     const score = Number.isFinite(n) ? Math.min(100, Math.max(0, Math.round(n))) : 50;
-    const reason = typeof o.reason === "string" ? o.reason.trim().slice(0, 200) : "";
+    // A note with wording we can't publish about a named product is dropped rather than shown.
+    const reason = safeReason(typeof o.reason === "string" ? o.reason.trim().slice(0, 200) : "") ?? "";
 
     ingredients.push({ raw_name: raw, canonical_name: canonical, provisional_score: score, reason });
   }

@@ -1,4 +1,5 @@
 import { generateText } from "./llm.ts";
+import { WORDING_RULES, describeHits, dropRiskySentences, riskyTerms } from "./wording.ts";
 
 // TikTok / Instagram / YouTube titles, descriptions and hashtags for a scanned product.
 
@@ -81,17 +82,51 @@ ${i.offFacts ? `- Open Food Facts: ${i.offFacts}\n` : ""}- Lowest scoring (score
 ${i.nextProduct ? `- Tomorrow's video: ${i.nextProduct}
 ` : ""}
 TIKTOK IS A SEARCH ENGINE: people find these videos by typing questions. So for TikTok:
-- "title": a plain search question or phrase with the product name, the way people type it, e.g. "Is Oreo healthy? Every ingredient ranked" or "What's in Rao's sauce? Every ingredient explained". No scores, no jargon.
-- "description": first line repeats the search phrase in other words ("Oreo ingredients, honestly"). Then one line with the single most surprising finding in everyday words. No Nutri-Score, NOVA, Green-Score or E-numbers here; say "ultra-processed", "added sugar", "artificial colors" instead.${i.nextProduct ? " End with a short line teasing tomorrow's video by name and asking people to follow, e.g. \"Tomorrow: Chips Ahoy. Follow so you don't miss it.\"" : ""} Then "Full report: fooddiescanner.com (link in bio)".
+- "title": a plain search question or phrase with the product name, the way people type it, e.g. "Oreo ingredients: every one explained" or "Rao's sauce ingredients, explained". No scores, no jargon.
+- "description": first line repeats the search phrase in other words ("Oreo ingredients, honestly"). Then one line with the single most surprising (and accurate) finding in everyday words, as an observation about the ingredient list. No Nutri-Score, NOVA, Green-Score or E-numbers here; say "ultra-processed", "added sugar", "artificial colors" instead.${i.nextProduct ? " End with a short line teasing tomorrow's video by name and asking people to follow, e.g. \"Tomorrow: Chips Ahoy. Follow so you don't miss it.\"" : ""} Then "Full report: fooddiescanner.com (link in bio)".
 - "hashtags": exactly 3 to 5: one broad (food or healthyeating), one topic (foodlabel or ingredients), and the rest product or category terms people search (oreo, cookies). No #fyp style tags.
 
 Return ONLY a JSON object, no markdown fences:
 {"tiktok": {"title": max 90 chars, "description": max 250 chars, "hashtags": 3 to 5 words without the # sign},
  "instagram": {"title": max 90 chars, "description": max 500 chars, "hashtags": 3 to 5 words without the # sign, mixing one or two broad tags with niche ones},
  "youtube": {"title": max 90 chars, searchable: the product name plus a plain hook such as "ingredients, honestly", "description": max 700 chars, first sentence is a keyword-rich summary of what the video shows, then 1-2 short lines of detail, "hashtags": 18 to 20 words without the # sign, no duplicates, ordered most important first: broad (food, nutrition, healthyeating), topic (ingredients, foodlabel, nutriscore), and product-specific search terms. They are used as YouTube tags}}
-No medical or disease claims, no emoji spam. Present the score as an ingredient review and opinion, not a verdict on the company: never call a product unsafe, harmful, toxic, dangerous or misleading, never suggest the brand is hiding or tricking anyone, and never tell people to stop buying it.`;
+No medical or disease claims, no emoji spam. Present the score as an ingredient review and opinion, not a verdict on the company. Describe the lists as "highest-scoring" and "lowest-scoring" ingredients, never "best and worst".
+
+${WORDING_RULES}`;
+}
+
+/** Risky phrases anywhere in the generated titles and descriptions. */
+export function copyRisks(copy: CopyResult) {
+  return riskyTerms(Object.values(copy).map((c) => `${c.title} ${c.description}`).join(" "));
+}
+
+/** Last resort: drop risky sentences from descriptions and fall back to a plain title. */
+export function scrubCopy(copy: CopyResult, productName: string | null): CopyResult {
+  const plain = `${productName ?? "This product"}: ingredients explained`.slice(0, 90);
+  const fix = (c: SocialCopy): SocialCopy => ({
+    ...c,
+    title: riskyTerms(c.title).length ? plain : c.title,
+    description: c.description
+      .split("\n")
+      .map((line) => (riskyTerms(line).length ? dropRiskySentences(line) : line))
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim(),
+  });
+  return { tiktok: fix(copy.tiktok), instagram: fix(copy.instagram), youtube: fix(copy.youtube) };
 }
 
 export async function createCopy(input: CopyInput): Promise<CopyResult> {
-  return parseCopy(await generateText(buildPrompt(input)), Boolean(input.offFacts));
+  const prompt = buildPrompt(input);
+  let copy = parseCopy(await generateText(prompt), Boolean(input.offFacts));
+  const risks = copyRisks(copy);
+  if (risks.length) {
+    // One retry with the exact phrases to fix, then strip whatever is left.
+    copy = parseCopy(
+      await generateText(`${prompt}\n\nYour previous draft used wording we can't publish about a named product: ${describeHits(risks)}. Rewrite it following the WORDING RULES.`),
+      Boolean(input.offFacts),
+    );
+    if (copyRisks(copy).length) copy = scrubCopy(copy, input.productName);
+  }
+  return copy;
 }

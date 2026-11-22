@@ -4,7 +4,7 @@ import { wordsFromAlignment } from "@/lib/captions";
 import { isMock } from "@/lib/mock";
 import { latestVideo } from "@/lib/queries";
 import { mediaUrl, putMedia } from "@/lib/storage";
-import { ensureHook, fixCounts, labelCounts, narration, parseScript } from "@/lib/script";
+import { ensureHook, fixCounts, labelCounts, narration, parseScript, scrubScript } from "@/lib/script";
 import { parseDelivery } from "@/lib/delivery";
 import { cleanLines, withCustomLines } from "@/lib/custom-lines";
 import { HttpError, handler, json, paramId } from "@/lib/http";
@@ -33,7 +33,8 @@ export const POST = handler(async (req, ctx) => {
   let scriptJson = video.script;
   try {
     const parsed = parseScript(video.script);
-    const fixed = counts ? ensureHook(fixCounts(parsed, counts.best, counts.worst)) : parsed;
+    // Also strips wording we can't publish from the model's lines (your own lines are kept).
+    const fixed = ensureHook(scrubScript(counts ? fixCounts(parsed, counts.best, counts.worst) : parsed));
     // Your own lines become extra scenes in the saved script, so captions and pictures follow the voice.
     const withLines = withCustomLines(fixed, cleanLines(body.custom_lines));
     scriptJson = JSON.stringify(withLines);

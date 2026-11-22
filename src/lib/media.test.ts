@@ -155,7 +155,7 @@ test("pickCandidates: best greens, worst reds, trivial water skipped", () => {
 test("prompt: groups and tone in, no numeric scores, ends on a question rule", () => {
   const p = buildPrompt({ productName: "Oat Bar", overall: 52, allergens: [], ingredients: ings, tone: "playful" });
   assert.match(p, /Upbeat, witty/);
-  assert.match(p, /THE TWO BEST[^]*Whole grain oats[^]*THE FIVE WORST[^]*Red 40/); // 2 good; 5 of the fair/poor ones
+  assert.match(p, /THE TWO HIGHEST-SCORING[^]*Whole grain oats[^]*THE FIVE LOWEST-SCORING[^]*Red 40/); // 2 good; 5 of the fair/poor ones
   assert.match(p, /COUNTS FOR THIS LABEL/);
   assert.match(p, /lands on the lower side/); // under 60: the lower-side verdict
   assert.doesNotMatch(p, /VERDICT FOR THIS PRODUCT: it is mostly good/);
@@ -169,9 +169,9 @@ test("prompt: groups and tone in, no numeric scores, ends on a question rule", (
 test("prompt: empty group is shown as none", () => {
   const p = buildPrompt({ productName: null, overall: 90, allergens: [], ingredients: [{ name: "Oats", score: 95, reason: null }] });
   assert.match(p, /VERDICT FOR THIS PRODUCT: it is mostly good/); // 60 and over: praise, extra detail on the worse ones
-  assert.match(p, /THE BEST ingredient on this label[^]*Oats \[good\][^]*THE WORST ingredients on this label[^]*\(none\)/); // one good ingredient: best only
+  assert.match(p, /THE HIGHEST-SCORING ingredient on this label[^]*Oats \[good\][^]*THE LOWEST-SCORING ingredients on this label[^]*\(none\)/); // one good ingredient: best only
   assert.match(p, /skip this section/);
-  assert.match(p, /NO worst ingredients/);
+  assert.match(p, /NO lower-scoring ingredients/);
   assert.match(p, /nothing to warn about on this label/);
   assert.doesNotMatch(p, /lands on the lower side/);
   const c = pickCandidates(ings);
@@ -194,12 +194,12 @@ test("pickCandidates: best only good, worst only fair/poor, five each at most, n
     assert.equal(new Set(names).size, names.length);
   }
   const p = buildPrompt({ productName: null, overall: 85, allergens: [], ingredients: mk([90, 85, 80, 55]) });
-  assert.match(p, /the three best ingredients and the worst ingredient/);
+  assert.match(p, /the three highest-scoring ingredients and the lowest-scoring ingredient/);
   assert.match(p, /NOT five and five/);
   const clean = buildPrompt({ productName: null, overall: 90, allergens: [], ingredients: mk([90, 85]) });
-  assert.match(clean, /never say \"worst\"/);
+  assert.match(clean, /never say \"lowest-scoring\"/);
   const full = buildPrompt({ productName: null, overall: 50, allergens: [], ingredients: mk([95, 90, 85, 80, 75, 50, 45, 30, 20, 10]) });
-  assert.match(full, /THE FIVE BEST[^]*THE FIVE WORST/);
+  assert.match(full, /THE FIVE HIGHEST-SCORING[^]*THE FIVE LOWEST-SCORING/);
   assert.doesNotMatch(full, /COUNTS FOR THIS LABEL/);
 });
 
