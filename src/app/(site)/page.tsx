@@ -99,7 +99,6 @@ const PERKS = [
 
 const CONTACT = [
   { label: "Email", value: CONTACT_EMAIL, href: `mailto:${CONTACT_EMAIL}` },
-  { label: "Phone", value: "+1 (704) 750-5858", href: "tel:+17047505858" },
   { label: "Based in", value: "Charlotte, NC" },
   { label: "Hours", value: "Monday – Friday, 7:00 AM – 7:00 PM ET" },
 ];
