@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const LEGAL_UPDATED = "November 21, 2026";
-export const CONTACT_EMAIL = "sanjayaghimire@gmail.com";
+export const CONTACT_EMAIL = "support@fooddiescanner.com";
 
 export default function LegalPage({ title, children }: { title: string; children: React.ReactNode }) {
   return (
