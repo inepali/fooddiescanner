@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-/** Make invite codes for the rewards program and see who used them. */
+/** Make invite codes for the points program and see who used them. */
 export default async function InvitesPage() {
   const db = supabase();
   const [{ data, error }, { count: members }] = await Promise.all([

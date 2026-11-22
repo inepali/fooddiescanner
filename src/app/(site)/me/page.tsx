@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import Leaderboard from "@/components/site/Leaderboard";
 import { RewardDetailsForm } from "@/components/site/MemberForms";
+import { topLeaders } from "@/lib/leaderboard";
 import { memberFromToken } from "@/lib/member-auth";
 import { canSubmit } from "@/lib/member-scan";
-import { MEMBER_ACCESS_COOKIE, MEMBER_REFRESH_COOKIE, rewardsMissing } from "@/lib/members";
+import { MEMBER_ACCESS_COOKIE, MEMBER_REFRESH_COOKIE } from "@/lib/members";
 import { supabase } from "@/lib/supabase";
 import { wantedProducts } from "@/lib/wanted";
 
-export const metadata: Metadata = { title: "Your rewards", robots: { index: false } };
+export const metadata: Metadata = { title: "Your points", robots: { index: false } };
 export const dynamic = "force-dynamic";
-
-const LABELS = { email: "Confirm your email", phone: "Add your phone number", tiktok: "Add your TikTok username" } as const;
 
 export default async function MePage() {
   const jar = await cookies();
@@ -26,7 +26,6 @@ export default async function MePage() {
     .select("points, scans, first_scans")
     .eq("creator_id", member.id)
     .maybeSingle();
-  const missing = rewardsMissing(member);
   const [{ data: recent }, { data: notices }] = await Promise.all([
     supabase()
       .from("scans")
@@ -44,7 +43,8 @@ export default async function MePage() {
       .limit(10),
   ]);
   const videos = canSubmit("video", member.tier);
-  const wanted = await wantedProducts();
+  const [wanted, leaders] = await Promise.all([wantedProducts(), topLeaders(supabase()).catch(() => [])]);
+  const myRank = leaders.find((l) => l.handle === member.handle)?.rank ?? null;
 
   return (
     <main className="mx-auto max-w-md space-y-6 px-5 pb-20 pt-6 sm:px-8">
@@ -71,7 +71,10 @@ export default async function MePage() {
       <section className="space-y-4 rounded-3xl bg-white p-7 shadow-sm">
         <div>
           <p className="text-sm text-[#5B6B60]">@{member.handle}{member.tier === "creator" ? " · Video creator" : ""}</p>
-          <h1 className="font-display text-3xl font-extrabold tracking-tight">{board?.points ?? 0} points</h1>
+          <h1 className="font-display text-3xl font-extrabold tracking-tight">{(board?.points ?? 0).toLocaleString("en-US")} points</h1>
+          <p className="text-[13px] text-[#5B6B60]">
+            {myRank ? `#${myRank} on the leaderboard · ` : ""}Points are for bragging rights only and have no cash value.
+          </p>
         </div>
         <dl className="grid grid-cols-2 gap-3 text-center">
           <div className="rounded-2xl bg-[#F6F7F2] p-4">
@@ -110,6 +113,14 @@ export default async function MePage() {
         </section>
       )}
 
+      <section className="space-y-3 rounded-3xl bg-white p-7 shadow-sm">
+        <div>
+          <h2 className="text-xl font-bold">Top ten</h2>
+          <p className="text-[15px] text-[#3D4C42]">{myRank ? "You’re on the board. Keep scanning to hold your spot." : "Earn points with accepted scans to make the top ten."}</p>
+        </div>
+        <Leaderboard rows={leaders} me={member.handle} />
+      </section>
+
       {recent && recent.length > 0 && (
         <section className="space-y-3 rounded-3xl bg-white p-7 shadow-sm">
           <h2 className="text-xl font-bold">{videos ? "Your scans and videos" : "Your scans"}</h2>
@@ -138,19 +149,11 @@ export default async function MePage() {
 
       <section className="space-y-4 rounded-3xl bg-white p-7 shadow-sm">
         <div className="space-y-1">
-          <h2 className="text-xl font-bold">Rewards details</h2>
-          {missing.length === 0 ? (
-            <p className="text-[15px] text-[#1E6B45]">You’re all set for rewards.</p>
-          ) : (
-            <>
-              <p className="text-[15px] text-[#3D4C42]">We need these before we can send you rewards:</p>
-              <ul className="list-disc pl-5 text-[15px]">
-                {missing.map((m) => (
-                  <li key={m}>{LABELS[m]}{m === "email" ? ` (link sent to ${member.email})` : ""}</li>
-                ))}
-              </ul>
-            </>
+          <h2 className="text-xl font-bold">Your details</h2>
+          {!member.emailConfirmed && (
+            <p className="text-[15px] text-[#3D4C42]">Confirm your email: we sent a link to {member.email}.</p>
           )}
+          <p className="text-[15px] text-[#3D4C42]">Optional. Your TikTok lets us tag you when we post your video.</p>
         </div>
         <RewardDetailsForm phone={member.phone} tiktok={member.tiktok} />
       </section>

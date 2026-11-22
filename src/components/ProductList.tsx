@@ -87,7 +87,7 @@ export default function ProductList({ initial }: { initial: Target[] }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-neutral-500">
-        {wanted} marked <strong>Wanted next</strong>: members see the top 5 on their rewards page, and new scripts pick tomorrow&apos;s scan from this list
+        {wanted} marked <strong>Wanted next</strong>: members see the top 5 on their points page, and new scripts pick tomorrow&apos;s scan from this list
         (rivals of the product first).
       </p>
       <div className="flex flex-wrap gap-2">

@@ -1,4 +1,4 @@
-// Member (rewards program) helpers that don't touch the network, so they can be unit tested.
+// Member (points program) helpers that don't touch the network, so they can be unit tested.
 // Members sign in with Supabase email + password. The admin signs in on /admin (see session.ts).
 
 export const MEMBER_ACCESS_COOKIE = "fs_member_at";
@@ -61,17 +61,6 @@ export function newInviteCode(length = 8, rand: (n: number) => number = (n) => c
   const abc = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
   let out = "";
   for (let i = 0; i < length; i++) out += abc[rand(abc.length)];
-  return out;
-}
-
-export type RewardCheck = { emailConfirmed: boolean; phone: string | null; tiktok: string | null };
-
-/** What is still missing before this member's rewards can be paid out. Empty = ready. */
-export function rewardsMissing(m: RewardCheck): ("email" | "phone" | "tiktok")[] {
-  const out: ("email" | "phone" | "tiktok")[] = [];
-  if (!m.emailConfirmed) out.push("email");
-  if (!m.phone) out.push("phone");
-  if (!m.tiktok) out.push("tiktok");
   return out;
 }
 

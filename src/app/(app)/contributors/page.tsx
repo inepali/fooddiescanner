@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-/** Admin: every rewards member, with tier (upgrade / downgrade) and active / inactive. */
+/** Admin: every points-program member, with tier (upgrade / downgrade) and active / inactive. */
 export default async function ContributorsPage() {
   const db = supabase();
   const [{ data: people, error }, { data: subs }, { data: ledger }, users] = await Promise.all([
