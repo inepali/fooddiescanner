@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { CONTACT_EMAIL } from "@/components/LegalPage";
-import { isBot, parseContact, sendContactEmail } from "@/lib/contact";
+import { CONTACT_EMAIL, isBot, parseContact, sendContactEmail } from "@/lib/contact";
 
 // POST { name, email, message, company } → emails the homepage contact form to support.
 // Public (see middleware). "company" is a hidden honeypot: bots fill it, people don't.

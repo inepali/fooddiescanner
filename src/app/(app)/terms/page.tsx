@@ -1,13 +1,7 @@
 import type { Metadata } from "next";
-import LegalPage, { CONTACT_EMAIL } from "@/components/LegalPage";
+import LegalPage, { ContactLink } from "@/components/LegalPage";
 
 export const metadata: Metadata = { title: "Terms of Service · Fooddie Scanner" };
-
-const mail = (
-  <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>
-    {CONTACT_EMAIL}
-  </a>
-);
 
 export default function Terms() {
   return (
@@ -57,7 +51,7 @@ export default function Terms() {
       <h2>5. Corrections and removal requests</h2>
       <p>
         If you are a manufacturer, brand owner, retailer or anyone else who believes a breakdown is inaccurate or out of date, or that
-        something on the service infringes your rights, email {mail} with the page link, what you believe is wrong and, if possible, a
+        something on the service infringes your rights, <ContactLink /> with the page link, what you believe is wrong and, if possible, a
         photo of the current label or other supporting information. We review every request in good faith. When a breakdown is wrong or
         out of date we correct it, rescan the product or take the page down, and we remove infringing material.
       </p>
@@ -92,7 +86,7 @@ export default function Terms() {
         voiceover. We decide whether and how to publish a submission and don&apos;t have to publish anything.
       </p>
       <p>
-        You can ask us to remove a submission at any time by emailing {mail}. We will take it off the site and our own social accounts
+        You can ask us to remove a submission at any time by <ContactLink>contacting us</ContactLink>. We will take it off the site and our own social accounts
         within a reasonable time, but we can&apos;t recall copies other people have already saved or shared.
       </p>
 
@@ -150,7 +144,7 @@ export default function Terms() {
       <h2>15. Changes and contact</h2>
       <p>
         We may update these terms. When we do, we change the date at the top, and if a change matters to members we tell them in the app
-        or by email. Using the service after an update means you accept the new terms. Questions: {mail}.
+        or by email. Using the service after an update means you accept the new terms. Questions? <ContactLink>Reach out here</ContactLink>.
       </p>
     </LegalPage>
   );

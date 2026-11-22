@@ -3,6 +3,9 @@
 
 import { normalizeEmail } from "./members.ts";
 
+/** Where contact form messages go. Never shown on the site. */
+export const CONTACT_EMAIL = "support@fooddiescanner.com";
+
 export const CONTACT_LIMITS = { name: 100, message: 5000, minMessage: 10 } as const;
 
 export type ContactInput = { name: string; email: string; message: string };

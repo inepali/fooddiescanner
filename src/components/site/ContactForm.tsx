@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CONTACT_LIMITS } from "@/lib/contact";
 
 // Homepage contact form (dark card). Posts to /api/contact, which emails support.
@@ -14,6 +14,11 @@ export default function ContactForm() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  // "Report an error" on a scan page links here with ?correction=<product>.
+  useEffect(() => {
+    const product = new URLSearchParams(window.location.search).get("correction");
+    if (product) setF((prev) => (prev.message ? prev : { ...prev, message: `Correction for ${product.slice(0, 200)}: ` }));
+  }, []);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
 
   async function submit(e: React.FormEvent) {
