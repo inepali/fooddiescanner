@@ -1,5 +1,6 @@
 import { RING_SIZE } from "./render.ts";
 import { badgeDialogues, badgeTimes, type BadgeData } from "./badges.ts";
+import { DISCLAIMER_SECONDS, VIDEO_DISCLAIMER } from "./disclaimer.ts";
 // ElevenLabs returns character-level timings. Captions need word-level timings.
 
 export type Alignment = {
@@ -147,6 +148,8 @@ export function buildAss(opts: {
   badgeAt?: number[];
   /** NOVA / Nutri-Score / Green-Score cards along the bottom (only the known ones are drawn). */
   badges?: Partial<BadgeData>;
+  /** Disclaimer card shown over the last few seconds. Defaults to the standard one; pass "" to leave it out. */
+  disclaimer?: string;
   width?: number;
   height?: number;
 }): string {
@@ -180,6 +183,12 @@ export function buildAss(opts: {
     const at = opts.badgeAt ?? badgeTimes(opts.badges, opts.words, opts.revealAt ?? 0);
     lines.push(...badgeDialogues(opts.badges, at.map(assTime), end));
   }
+  const disclaimer = (opts.disclaimer ?? VIDEO_DISCLAIMER).replace(/\\/g, "").replace(/[{}]/g, "").trim();
+  if (disclaimer && opts.duration > 0) {
+    // Between the ring and the captions, on a dark box so it reads over any footage.
+    const from = Math.max(0, opts.duration - DISCLAIMER_SECONDS);
+    lines.push(`Dialogue: 2,${assTime(from)},${end},Disclaimer,,0,0,0,,{\\an5\\pos(${Math.round(W / 2)},${Math.round(H * 0.46)})\\fad(300,0)}${disclaimer}`);
+  }
   return `[Script Info]
 ScriptType: v4.00+
 PlayResX: ${W}
@@ -194,6 +203,7 @@ Style: RingLabel,${opts.fontName},38,&H00525252,&H00525252,&H00525252,&H00000000
 Style: BadgeTitle,${opts.fontName},24,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,1,0,1,2,0,5,0,0,0,1
 Style: BadgeLetter,${opts.fontName},40,&H00FFFFFF,&H00FFFFFF,&H00FFFFFF,&H00000000,-1,0,0,0,100,100,0,0,1,0,0,5,0,0,0,1
 Style: Spin,${opts.fontName},20,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1
+Style: Disclaimer,${opts.fontName},32,&H00FFFFFF,&H00FFFFFF,&H40000000,&H40000000,0,0,0,0,100,100,0,0,3,18,0,5,110,110,0,1
 Style: RingScore,${opts.fontName},130,&H00171717,&H00171717,&H00171717,&H00000000,-1,0,0,0,100,100,0,0,1,0,0,5,0,0,0,1
 
 [Events]
