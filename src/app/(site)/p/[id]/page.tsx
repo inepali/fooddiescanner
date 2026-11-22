@@ -8,7 +8,6 @@ import Image from "next/image";
 import ScoreRing from "@/components/ScoreRing";
 import OffGrades from "@/components/site/OffGrades";
 import { coverImagePath, pickCoverRow } from "@/lib/media";
-import { CONTACT_EMAIL } from "@/components/LegalPage";
 
 // Cached and rebuilt at most every 10 minutes, so crawlers and shared links don't re-render it on every visit.
 // Renaming, unpublishing or deleting a scan refreshes it right away (revalidatePath in /api/scans/[id]).
@@ -162,9 +161,9 @@ export default async function PublicScanPage({ params }: { params: Promise<{ id:
         </p>
         <p>
           Fooddie Scanner isn’t affiliated with or endorsed by the maker of this product. Brand names belong to their owners.{" "}
-          <a className="underline" href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Correction: ${scan.product_name ?? scan.id}`)}`}>
+          <Link className="underline" href={`/?correction=${encodeURIComponent(scan.product_name ?? scan.id)}#contact`}>
             Report an error
-          </a>
+          </Link>
           {" · "}
           <Link className="underline" href="/terms">
             Terms

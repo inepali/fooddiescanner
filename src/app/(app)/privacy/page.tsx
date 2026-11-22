@@ -1,13 +1,7 @@
 import type { Metadata } from "next";
-import LegalPage, { CONTACT_EMAIL } from "@/components/LegalPage";
+import LegalPage, { ContactLink } from "@/components/LegalPage";
 
 export const metadata: Metadata = { title: "Privacy Policy · Fooddie Scanner" };
-
-const mail = (
-  <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>
-    {CONTACT_EMAIL}
-  </a>
-);
 
 export default function Privacy() {
   return (
@@ -90,7 +84,7 @@ export default function Privacy() {
       <h2>Your choices and rights</h2>
       <ul>
         <li>You can view and update your account and reward details on your account page.</li>
-        <li>You can ask us to show you, correct, export or delete your personal information, or to remove a submission, by emailing {mail}. We reply within 30 days.</li>
+        <li>You can ask us to show you, correct, export or delete your personal information, or to remove a submission, by <ContactLink>contacting us</ContactLink>. We reply within 30 days.</li>
         <li>Some US states give their residents extra privacy rights. We honor these requests for every member, wherever they live, and we won&apos;t treat you differently for using them.</li>
       </ul>
 
@@ -110,7 +104,7 @@ export default function Privacy() {
       <h2>Changes and contact</h2>
       <p>
         When this policy changes, we update the date at the top, and we tell members about important changes in the app or by email.
-        Questions or requests: {mail}.
+        Questions or requests? <ContactLink>Reach out here</ContactLink>.
       </p>
     </LegalPage>
   );

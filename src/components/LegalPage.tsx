@@ -1,7 +1,15 @@
 import Link from "next/link";
 
 export const LEGAL_UPDATED = "November 21, 2026";
-export const CONTACT_EMAIL = "support@fooddiescanner.com";
+
+/** Links to the contact form on the homepage (we don't publish an email address). */
+export function ContactLink({ children = "contact us" }: { children?: React.ReactNode }) {
+  return (
+    <Link href="/#contact" className="underline">
+      {children}
+    </Link>
+  );
+}
 
 export default function LegalPage({ title, children }: { title: string; children: React.ReactNode }) {
   return (
