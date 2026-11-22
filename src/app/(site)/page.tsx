@@ -4,7 +4,7 @@ import ScanCard from "@/components/site/ScanCard";
 import { supabase } from "@/lib/supabase";
 import { BAND_LABEL, BAND_STYLE, libraryStats, mostFlagged, orEmpty, recentScans } from "@/lib/library";
 import type { Band } from "@/lib/scoring";
-import { CONTACT_EMAIL } from "@/components/LegalPage";
+import ContactForm from "@/components/site/ContactForm";
 import { MAX_MEMBER_VIDEOS, POINTS, VIDEO_MAX_S, VIDEO_MIN_S } from "@/lib/member-scan";
 
 // Rebuilt at most every 5 minutes, so a scan you make public shows up shortly after.
@@ -95,12 +95,6 @@ const PERKS = [
   ["Get featured", "Accepted videos are posted to Fooddie Scanner's TikTok, Instagram and YouTube."],
   ["Help other shoppers", "Your scan becomes a free, searchable breakdown anyone can read."],
   ["Know your pantry", "See exactly what's in the food you already buy, ingredient by ingredient."],
-];
-
-const CONTACT = [
-  { label: "Email", value: CONTACT_EMAIL, href: `mailto:${CONTACT_EMAIL}` },
-  { label: "Based in", value: "Charlotte, NC" },
-  { label: "Hours", value: "Monday – Friday, 7:00 AM – 7:00 PM ET" },
 ];
 
 const SOCIAL = [
@@ -410,22 +404,7 @@ export default async function Home() {
               Questions about a breakdown, a correction for a label (brands welcome), an invite request or a partnership idea? We’d love to hear from you.
             </p>
           </div>
-          <dl className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            {CONTACT.map((c) => (
-              <div key={c.label} className="space-y-1">
-                <dt className="text-xs font-bold uppercase tracking-wider text-[#A9B5AD]">{c.label}</dt>
-                <dd className="break-words text-lg font-semibold text-white">
-                  {c.href ? (
-                    <a href={c.href} className="text-white hover:text-[#F2B705]">
-                      {c.value}
-                    </a>
-                  ) : (
-                    c.value
-                  )}
-                </dd>
-              </div>
-            ))}
-          </dl>
+          <ContactForm />
         </div>
       </section>
     </>
