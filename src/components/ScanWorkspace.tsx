@@ -5,6 +5,7 @@ import AppNav from "./AppNav";
 import { useRouter } from "next/navigation";
 import { DEFAULT_DELIVERY, DELIVERIES, type Delivery } from "@/lib/delivery";
 import { withPublicLink } from "@/lib/public-link";
+import { withDisclaimer } from "@/lib/disclaimer";
 import { SITE_URL } from "@/lib/site";
 import { REVEAL_CHOICES, type RevealChoice } from "@/lib/reveal";
 import { POSITIONS, type CustomLine, type LinePosition } from "@/lib/custom-lines";
@@ -1036,7 +1037,7 @@ export default function ScanWorkspace(props: StudioProps) {
                     copyText(
                       c.platform,
                       // YouTube ignores every hashtag when a description has more than 15, so only the first few go in the text.
-                      `${d.title}\n\n${withPublicLink(d.description, publicUrl)}\n\n${c.platform === "youtube" ? d.tags.split(/\s+/).filter(Boolean).slice(0, 4).join(" ") : d.tags}`,
+                      `${d.title}\n\n${withPublicLink(withDisclaimer(d.description), publicUrl)}\n\n${c.platform === "youtube" ? d.tags.split(/\s+/).filter(Boolean).slice(0, 4).join(" ") : d.tags}`,
                     )
                   }
                   aria-live="polite"
@@ -1063,7 +1064,7 @@ export default function ScanWorkspace(props: StudioProps) {
               </label>
               {publicUrl && (
                 <p className="text-xs text-neutral-500">
-                  Link added after the &quot;not medical advice&quot; line when you post or copy: <span className="break-all">{publicUrl}</span>
+                  Link added after the disclaimer when you post or copy: <span className="break-all">{publicUrl}</span>
                 </p>
               )}
               <label className="block space-y-1">

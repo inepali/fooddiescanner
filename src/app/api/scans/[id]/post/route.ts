@@ -3,6 +3,7 @@ import { HttpError, handler, json, paramId } from "@/lib/http";
 import { getMedia, mediaUrl } from "@/lib/storage";
 import { liveToken, requireGuard } from "@/lib/social-accounts";
 import { withPublicLink } from "@/lib/public-link";
+import { withDisclaimer } from "@/lib/disclaimer";
 import { SITE_URL } from "@/lib/site";
 import {
   TIKTOK_PRIVACY,
@@ -50,12 +51,12 @@ export const POST = handler(async (req, ctx) => {
       ? (copies ?? []).find((c) => c.platform === "youtube") ?? (copies ?? []).find((c) => c.platform === "instagram") ?? (copies ?? []).find((c) => c.platform === "tiktok")
       : (copies ?? []).find((c) => c.platform === platform);
   if (!copy) throw new HttpError("Generate the social copy first.");
-  // A public report page is linked right after the "not medical advice" line of the description.
+  // Every post carries the full disclaimer; a public report page is linked right after it.
   const { data: scan } = await db.from("scans").select("is_public").eq("id", id).maybeSingle();
   const link = scan?.is_public ? `${SITE_URL}/p/${id}` : null;
   const parts = {
     title: copy.title ?? "",
-    description: withPublicLink(copy.description ?? "", link),
+    description: withPublicLink(withDisclaimer(copy.description ?? ""), link),
     hashtags: copy.hashtags ?? [],
   };
   const caption = buildCaption(parts);

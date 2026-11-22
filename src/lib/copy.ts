@@ -1,11 +1,13 @@
 import { generateText } from "./llm.ts";
+import { VIDEO_DISCLAIMER } from "./disclaimer.ts";
 
 // TikTok / Instagram / YouTube titles, descriptions and hashtags for a scanned product.
 
 export type SocialCopy = { title: string; description: string; hashtags: string[] };
 export type CopyResult = { tiktok: SocialCopy; instagram: SocialCopy; youtube: SocialCopy };
 
-export const AI_NOTE = "Our opinion of the ingredient list, for information only. Not medical advice.";
+/** Disclaimer added to every caption (see disclaimer.ts). */
+export const AI_NOTE = VIDEO_DISCLAIMER;
 export const CTA = "Do you eat this? Tell me in the comments.";
 export const OFF_CREDIT = "Grades and nutrition data: Open Food Facts (ODbL)";
 
