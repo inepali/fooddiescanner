@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-// Join, sign-in and rewards-details forms for members (the public site's look).
+// Join, sign-in and member-details forms for members (the public site's look).
 
 const input =
   "h-12 w-full rounded-xl border border-[#D8DED6] bg-white px-4 text-base text-[#14201A] focus:border-[#1E6B45] focus:outline-none";
@@ -173,7 +173,7 @@ export function RewardDetailsForm({ phone: p, tiktok: t }: { phone: string | nul
 
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
-      <Field id="phone" label="Phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" hint="Used only to verify you and pay rewards. No marketing texts. US numbers can skip the +1." />
+      <Field id="phone" label="Phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" hint="Optional. Used only to confirm you’re a real person so the leaderboard stays fair. No marketing texts. US numbers can skip the +1." />
       <Field
         id="tiktok"
         label="TikTok username"
@@ -181,7 +181,7 @@ export function RewardDetailsForm({ phone: p, tiktok: t }: { phone: string | nul
         onChange={(e) => setTiktok(e.target.value)}
         autoCapitalize="none"
         placeholder="@yourname"
-        hint="The account you’ll post your scan videos from."
+        hint="Optional. The account you post from, so we can tag you."
       />
       {msg && (
         <p role={msg.ok ? "status" : "alert"} className={`text-sm ${msg.ok ? "text-[#1E6B45]" : "text-red-700"}`}>

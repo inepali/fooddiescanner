@@ -3,7 +3,7 @@ import { isSecure, memberFromToken, readMemberCookies, refreshMember, setMemberC
 import { normalizePhone, normalizeTiktok } from "@/lib/members";
 import { supabase } from "@/lib/supabase";
 
-/** POST { phone, tiktok } → saves the details we need before paying rewards. Empty clears a field. */
+/** POST { phone, tiktok } → saves the member's optional phone and TikTok. Empty clears a field. */
 export async function POST(req: Request) {
   const cookies = readMemberCookies(req);
   let member = await memberFromToken(cookies.access);

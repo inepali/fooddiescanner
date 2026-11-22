@@ -1,4 +1,4 @@
-// Admin: managing rewards members ("contributors"). Client-safe rules, unit tested.
+// Admin: managing points-program members ("contributors"). Client-safe rules, unit tested.
 // Tier: scanner (label scans) or creator (also sends videos). Inactive = the `banned` flag:
 // they can't sign in, and nothing they send earns points (see 0015 / 0019).
 

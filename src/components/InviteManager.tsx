@@ -47,7 +47,7 @@ export default function InviteManager({ initial }: { initial: Invite[] }) {
 
   async function share(code: string) {
     const url = link(code);
-    const text = "Join me on Fooddie Scanner: scan your pantry and earn rewards.";
+    const text = "Join me on Fooddie Scanner: scan your pantry, earn points and climb the leaderboard.";
     try {
       if (navigator.share) {
         await navigator.share({ title: "Fooddie Scanner invite", text, url });

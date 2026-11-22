@@ -12,7 +12,7 @@ export async function middleware(req: NextRequest) {
   // The public library: home, search and report pages (/p/<id>). They only ever show scans you turned public.
   if (path === "/" || path === "/search" || path.startsWith("/p/")) return NextResponse.next();
   if (path === "/robots.txt" || path === "/sitemap.xml") return NextResponse.next();
-  // Rewards members: they have their own Supabase email + password sign-in, checked by each route.
+  // Points-program members: they have their own Supabase email + password sign-in, checked by each route.
   // /api/invites is NOT here: making invite codes stays behind APP_PASSWORD.
   if (path === "/join" || path === "/signin" || path === "/forgot" || path === "/reset" || path === "/me" || path.startsWith("/me/") || path.startsWith("/api/members/")) return NextResponse.next();
   // The sign-in page and its endpoints.

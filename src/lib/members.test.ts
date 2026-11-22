@@ -9,7 +9,6 @@ import {
   normalizePhone,
   normalizeTiktok,
   passwordProblem,
-  rewardsMissing,
 } from "./members.ts";
 
 test("emails are trimmed, lowercased and checked", () => {
@@ -55,10 +54,6 @@ test("invite codes avoid look-alike characters", () => {
   assert.equal(newInviteCode(3, () => 0), "AAA");
 });
 
-test("rewards need confirmed email, phone and TikTok", () => {
-  assert.deepEqual(rewardsMissing({ emailConfirmed: false, phone: null, tiktok: null }), ["email", "phone", "tiktok"]);
-  assert.deepEqual(rewardsMissing({ emailConfirmed: true, phone: "+17045550123", tiktok: "me" }), []);
-});
 
 test("memberNext keeps redirects on-site", () => {
   assert.equal(memberNext("/me"), "/me");

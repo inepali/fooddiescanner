@@ -208,12 +208,12 @@ export default function MemberScan({ kind = "scan", wanted = [] }: { kind?: Subm
           <p className="mt-1 text-[15px] text-[#3D4C42]">
             {accepted
               ? "Thanks! Your video was accepted."
-              : "We’ll review it and let you know on your rewards page when it’s accepted."}
+              : "We’ll review it and let you know on your points page when it’s accepted."}
           </p>
         </div>
         <div className="grid gap-3">
           <a href="/me" className={`${btn} bg-[#1E6B45] text-white`}>
-            Back to rewards
+            Back to my points
           </a>
         </div>
       </section>
@@ -236,7 +236,7 @@ export default function MemberScan({ kind = "scan", wanted = [] }: { kind?: Subm
               {result.allergens.length > 0 && <p className="text-sm text-[#5B6B60]">Contains: {result.allergens.join(", ")}</p>}
             </div>
           </div>
-          <p className="text-[15px] text-[#1E6B45]">Submitted! Your points are on your rewards page, and we’ll let you know there when it’s accepted.</p>
+          <p className="text-[15px] text-[#1E6B45]">Submitted! Your points are on your points page, and we’ll let you know there when it’s accepted.</p>
         </section>
         {result.off && (
           <OffCrossCheck off={result.off} labelScore={result.label_score} externalScore={result.external_score} overall={overall} />
@@ -248,7 +248,7 @@ export default function MemberScan({ kind = "scan", wanted = [] }: { kind?: Subm
             Scan another product
           </a>
           <a href="/me" className={`${btn} bg-white text-[#14201A]`}>
-            Back to rewards
+            Back to my points
           </a>
         </div>
       </div>

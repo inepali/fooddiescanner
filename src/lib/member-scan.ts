@@ -63,7 +63,7 @@ export function videoLengthProblem(seconds: unknown): string | null {
 export type Part = "label" | "product_image" | "product_video";
 export type SubmissionKind = "scan" | "video";
 
-/** Points per reward. Keep in step with supabase/migrations/0019_photo_and_video_points.sql. */
+/** Points per action. Keep in step with supabase/migrations/0019_photo_and_video_points.sql. */
 export const POINTS = { scan: 10, photo: 20, first_scan: 20, video: 1000 } as const;
 
 /** What each step of a submission earns (the video's points land when it's accepted). */

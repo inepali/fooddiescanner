@@ -8,7 +8,7 @@ export default function Terms() {
     <LegalPage title="Terms of Service">
       <p>
         These terms cover your use of fooddiescanner.com, its public library of food label breakdowns, member accounts, the contributor
-        rewards program and the Fooddie Scanner videos on TikTok, Instagram and YouTube (together, the &quot;service&quot;). Fooddie Scanner
+        points program and the Fooddie Scanner videos on TikTok, Instagram and YouTube (together, the &quot;service&quot;). Fooddie Scanner
         is run from York County, South Carolina (&quot;we&quot;, &quot;us&quot;). By using the service you agree to these terms. If you don&apos;t
         agree, please don&apos;t use it.
       </p>
@@ -67,7 +67,7 @@ export default function Terms() {
       <ul>
         <li>Member accounts are by invite for now. To join you must be at least 18 years old and live in the United States.</li>
         <li>One account per person. Give us accurate information and keep your password private. You are responsible for activity on your account.</li>
-        <li>We may decline, suspend or close an account that breaks these terms, submits misleading content or tries to game the rewards program.</li>
+        <li>We may decline, suspend or close an account that breaks these terms, submits misleading content or tries to game the points program or the leaderboard.</li>
       </ul>
 
       <h2>8. Your submissions</h2>
@@ -90,16 +90,15 @@ export default function Terms() {
         within a reasonable time, but we can&apos;t recall copies other people have already saved or shared.
       </p>
 
-      <h2>9. Contributor rewards</h2>
+      <h2>9. Contributor points and leaderboard</h2>
       <ul>
         <li>Points are added only for submissions we review and accept. Acceptance is at our discretion. Current point values are shown on the site and may change for future submissions.</li>
-        <li>Points are a way to track rewards. They have no cash value until redeemed, are not your property, and can&apos;t be sold, transferred or combined between accounts.</li>
-        <li>You can redeem points under the redemption rules shown in your account, including any minimum payout. Before we pay, you must confirm your email and give us your phone number, your TikTok username and any tax information the law requires.</li>
-        <li>You are responsible for any taxes on rewards you receive. We may have to report payments to tax authorities.</li>
-        <li>We may cancel points earned through fraud, duplicate or copied submissions, multiple accounts or other breaks of these terms.</li>
-        <li>We may change or end the program. If we end it, we will give members at least 30 days&apos; notice and a chance to redeem points that meet the minimum payout.</li>
-        <li>Taking part doesn&apos;t make you our employee, agent or partner. The program is void where prohibited.</li>
-        <li>If you post content about Fooddie Scanner on your own accounts while earning rewards from us, say so clearly in the post (for example &quot;I earn rewards from Fooddie Scanner&quot;), as the FTC&apos;s endorsement rules require.</li>
+        <li>Points are for recognition only. They have no monetary or cash value and can&apos;t be redeemed, exchanged or paid out for money, prizes, gift cards or anything else. They are not your property and can&apos;t be sold, transferred or combined between accounts.</li>
+        <li>The ten members with the most points are shown on a public leaderboard by username. Being on the leaderboard doesn&apos;t earn you anything else.</li>
+        <li>We may remove points earned through fraud, duplicate or copied submissions, multiple accounts or other breaks of these terms, and take an account off the leaderboard.</li>
+        <li>We may change point values, reset the leaderboard, or end the program at any time. Because points have no value, nothing is owed when that happens.</li>
+        <li>Taking part doesn&apos;t make you our employee, agent or partner.</li>
+        <li>If you post content about Fooddie Scanner on your own accounts, please say that you&apos;re a Fooddie Scanner contributor.</li>
       </ul>
 
       <h2>10. Our videos and AI</h2>
@@ -124,8 +123,7 @@ export default function Terms() {
       <p>
         To the fullest extent the law allows, Fooddie Scanner and the people who run it are not liable for any indirect, incidental, special
         or consequential damages, or for any loss that comes from relying on a score, a breakdown or a video, including decisions about
-        what to buy or eat. Our total liability for any claim about the service is limited to the greater of $100 or the rewards we paid you
-        in the 12 months before the claim. Some places don&apos;t allow these limits, so they may not all apply to you.
+        what to buy or eat. Our total liability for any claim about the service is limited to $100. Some places don&apos;t allow these limits, so they may not all apply to you.
       </p>
 
       <h2>13. Indemnity</h2>

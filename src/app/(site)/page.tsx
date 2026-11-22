@@ -6,6 +6,8 @@ import { BAND_LABEL, BAND_STYLE, libraryStats, mostFlagged, orEmpty, recentScans
 import type { Band } from "@/lib/scoring";
 import ContactForm from "@/components/site/ContactForm";
 import { MAX_MEMBER_VIDEOS, POINTS, VIDEO_MAX_S, VIDEO_MIN_S } from "@/lib/member-scan";
+import Leaderboard from "@/components/site/Leaderboard";
+import { topLeaders } from "@/lib/leaderboard";
 
 // Rebuilt at most every 5 minutes, so a scan you make public shows up shortly after.
 export const revalidate = 300;
@@ -57,8 +59,8 @@ const FAQ = [
     a: "Contributors join by invite for now and must be 18 or older and live in the US. If you have an invite code, sign up on the Join page. Otherwise, contact us and tell us a little about yourself and the stores you shop at.",
   },
   {
-    q: "When do I get my rewards?",
-    a: "Points are added when the team reviews and accepts your submission. Points have no cash value until redeemed under the rules in your account. Before rewards can be paid, confirm your email and add your phone number and TikTok handle on your account page. See the Terms for the full program rules.",
+    q: "What are points worth?",
+    a: "Points are for bragging rights only. They have no monetary value and can't be redeemed, exchanged or paid out for cash, prizes or gift cards. They're added when the team reviews and accepts your submission, and the ten members with the most points are shown on the public leaderboard by username. See the Terms for the full rules.",
   },
 ];
 
@@ -91,7 +93,7 @@ const ROLES = [
 ] as const;
 
 const PERKS = [
-  ["Earn rewards", "Accepted scans and videos earn points toward rewards, under the program rules in our Terms."],
+  ["Climb the leaderboard", "Accepted scans and videos earn points. The top ten contributors are shown on the leaderboard. Points have no cash value."],
   ["Get featured", "Accepted videos are posted to Fooddie Scanner's TikTok, Instagram and YouTube."],
   ["Help other shoppers", "Your scan becomes a free, searchable breakdown anyone can read."],
   ["Know your pantry", "See exactly what's in the food you already buy, ingredient by ingredient."],
@@ -108,10 +110,11 @@ const h2 = "font-display text-4xl font-extrabold tracking-tight sm:text-[44px] s
 const wrap = "mx-auto max-w-6xl px-5 sm:px-8";
 
 export default async function Home() {
-  const [recent, flagged, stats] = await Promise.all([
+  const [recent, flagged, stats, leaders] = await Promise.all([
     orEmpty(() => recentScans(supabase(), 6), []),
     orEmpty(() => mostFlagged(supabase(), 6), []),
     orEmpty(() => libraryStats(supabase()), { products: 0, ingredients: 0 }),
+    orEmpty(() => topLeaders(supabase()), []),
   ]);
   const chips = flagged.slice(0, 5).map((f) => f.name);
 
@@ -296,7 +299,7 @@ export default async function Home() {
       <section id="contribute" className={`${wrap} scroll-mt-6 flex flex-col gap-12 py-24`}>
         <div className="max-w-3xl space-y-3">
           <p className={eyebrow}>Become a contributor</p>
-          <h2 className={h2}>Scan your pantry. Join and earn rewards.</h2>
+          <h2 className={h2}>Scan your pantry. Join and earn points.</h2>
           <p className="text-[17px] leading-relaxed text-[#3C4A42]">
             The library grows because real shoppers scan the food they actually buy. Contributors send in labels and short videos, our team
             reviews every submission, and accepted ones go live for everyone to read and watch.
@@ -337,6 +340,17 @@ export default async function Home() {
               <p className="text-base leading-relaxed text-[#3C4A42]">{text}</p>
             </div>
           ))}
+        </div>
+
+        <div id="leaderboard" className="scroll-mt-6 grid grid-cols-1 gap-8 rounded-[24px] border border-[#E2E6DE] bg-white p-8 lg:grid-cols-[1fr_1.4fr]">
+          <div className="space-y-2.5">
+            <h3 className="font-display text-3xl font-extrabold tracking-tight">Top ten contributors</h3>
+            <p className="text-base leading-relaxed text-[#3C4A42]">
+              Ranked by total points from accepted scans and videos. Points are for bragging rights only: they have no monetary value and
+              aren&apos;t paid out or redeemed.
+            </p>
+          </div>
+          <Leaderboard rows={leaders} />
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-6 rounded-[24px] bg-[#F2B705] p-8 sm:p-10">

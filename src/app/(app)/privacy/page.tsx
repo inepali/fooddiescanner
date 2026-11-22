@@ -24,7 +24,7 @@ export default function Privacy() {
       <p>When you join and contribute, we collect:</p>
       <ul>
         <li><strong>Account details:</strong> your email, the invite code you used and the username you pick. Passwords are handled by our sign-in provider (Supabase) and are stored only in hashed form. We never see them.</li>
-        <li><strong>Reward details:</strong> your phone number and TikTok username, which we use to verify you and pay rewards, plus any payment and tax information needed to send a reward.</li>
+        <li><strong>Optional details:</strong> your phone number and TikTok username, if you add them. We use the phone number only to confirm you&apos;re a real person, and the TikTok username to tag you when we post your video.</li>
         <li><strong>Submissions:</strong> the label photos, product photos and videos you send, and their date and time. Videos may include your face and voice.</li>
         <li><strong>Activity:</strong> your points, accepted and rejected submissions, and the products you were first to scan.</li>
       </ul>
@@ -33,7 +33,7 @@ export default function Privacy() {
       <h2>How we use it</h2>
       <ul>
         <li>To run the library, review submissions, publish accepted ones and make videos.</li>
-        <li>To track points, pay rewards and keep tax records the law requires.</li>
+        <li>To track points and show the top ten on the leaderboard. Points have no monetary value, so we never collect payment or tax details.</li>
         <li>To prevent fraud and abuse, for example duplicate accounts or copied submissions.</li>
         <li>To send account messages, such as email confirmation, password resets and notices that a submission was accepted.</li>
       </ul>
@@ -42,10 +42,10 @@ export default function Privacy() {
       <h2>What is public</h2>
       <ul>
         <li>Accepted scans: the product name, product and label photos, scores and ingredient breakdown.</li>
-        <li>Your username, on the leaderboard and on products you were first to scan. Pick a username that doesn&apos;t identify you if you prefer.</li>
+        <li>Your username and point total, on the top-ten leaderboard if you make it, and your username on products you were first to scan. Pick a username that doesn&apos;t identify you if you prefer.</li>
         <li>Accepted videos, including your face and voice if they appear, posted to Fooddie Scanner&apos;s TikTok, Instagram and YouTube.</li>
       </ul>
-      <p>Your email, phone number and reward details are never shown publicly. Please keep receipts, addresses and other people out of your photos and videos.</p>
+      <p>Your email, phone number and TikTok username are never shown publicly. Please keep receipts, addresses and other people out of your photos and videos.</p>
 
       <h2>Services that process data for us</h2>
       <p>We share only what each provider needs to do its job:</p>
@@ -56,7 +56,6 @@ export default function Privacy() {
         <li>ElevenLabs, which receives script text to make voiceovers. Your own voice is never sent to it.</li>
         <li>Open Food Facts, which receives a barcode or product name to look up public product data.</li>
         <li>TikTok, Instagram and YouTube, where accepted videos are published.</li>
-        <li>A payment provider, when a reward is paid.</li>
       </ul>
       <p>
         We don&apos;t sell personal information or share it for targeted advertising. We may disclose information if the law requires it,
@@ -77,13 +76,12 @@ export default function Privacy() {
       <h2>How long we keep it</h2>
       <p>
         We keep account information while your account is open. Published scans stay up until they are removed. When you delete your
-        account, we delete or anonymize your information within 30 days, except records we must keep by law, such as reward payment and tax
-        records. Scans you contributed may stay in the library without your username.
+        account, we delete or anonymize your information within 30 days, except records we must keep by law. Scans you contributed may stay in the library without your username.
       </p>
 
       <h2>Your choices and rights</h2>
       <ul>
-        <li>You can view and update your account and reward details on your account page.</li>
+        <li>You can view and update your account details on your account page.</li>
         <li>You can ask us to show you, correct, export or delete your personal information, or to remove a submission, by <ContactLink>contacting us</ContactLink>. We reply within 30 days.</li>
         <li>Some US states give their residents extra privacy rights. We honor these requests for every member, wherever they live, and we won&apos;t treat you differently for using them.</li>
       </ul>

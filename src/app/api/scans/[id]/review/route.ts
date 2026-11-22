@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 
 // Admin only (behind the admin login): review a member's scan or video submission.
 // { status: "approved" | "rejected", public?: boolean }. Rejecting takes the scan's points back (0017).
-// Approving leaves the member an "accepted" notice on their rewards page (once per submission).
+// Approving leaves the member an "accepted" notice on their points page (once per submission).
 export const POST = handler(async (req, ctx) => {
   const id = await paramId(ctx);
   const body = (await req.json().catch(() => ({}))) as { status?: unknown; public?: unknown };
