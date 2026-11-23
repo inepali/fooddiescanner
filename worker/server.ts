@@ -12,7 +12,8 @@
 
 import { createServer, type IncomingMessage } from "node:http";
 import { createHash, timingSafeEqual } from "node:crypto";
-import { runRender } from "../src/lib/render-job";
+import { jobAccessProblem, runRender } from "../src/lib/render-job";
+import { supabase } from "../src/lib/supabase";
 import { parseReveal } from "../src/lib/reveal";
 
 const SECRET = process.env.RENDER_WORKER_SECRET;
@@ -60,6 +61,19 @@ const server = createServer(async (req, res) => {
   const { scanId, jobId } = input;
   if (typeof scanId !== "string" || !UUID.test(scanId) || typeof jobId !== "string" || !UUID.test(jobId)) {
     return send(400, { error: "scanId and jobId must be UUIDs." });
+  }
+
+  // Check the database first: if this worker can't reach it, it can't record progress or failure either,
+  // so answer with the reason and let the app (which can) mark the job as failed.
+  let problem: string | null;
+  try {
+    problem = await jobAccessProblem(supabase(), jobId);
+  } catch (err) {
+    problem = err instanceof Error ? err.message : String(err);
+  }
+  if (problem) {
+    console.error(`render ${jobId}: ${problem}`);
+    return send(500, { error: problem });
   }
 
   const started = Date.now();

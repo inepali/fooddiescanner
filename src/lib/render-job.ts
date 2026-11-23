@@ -24,6 +24,20 @@ class Cancelled extends Error {}
  * clips/photos and uploads it. Reports stage and percent (plus a heartbeat)
  * through the `jobs` row, which the browser polls. Never throws.
  */
+type Db = ReturnType<typeof supabase>;
+
+/**
+ * Why this server can't work on the job, or null if it can. Catches a wrong Supabase URL
+ * or a key without access (e.g. the anon key instead of the service role key), which would
+ * otherwise look exactly like a cancelled job.
+ */
+export async function jobAccessProblem(db: Db, jobId: string): Promise<string | null> {
+  const { data, error } = await db.from("jobs").select("id").eq("id", jobId).maybeSingle();
+  if (error) return `Can't read the job from the database: ${error.message}. Check NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.`;
+  if (!data) return "Can't see the job in the database. Check that SUPABASE_SERVICE_ROLE_KEY is the service role key (not the anon key) for the right project.";
+  return null;
+}
+
 export async function runRender(scanId: string, jobId: string, reveal: RevealChoice = DEFAULT_REVEAL): Promise<void> {
   const db = supabase();
   const dir = await mkdtemp(join(tmpdir(), "render-"));
@@ -35,8 +49,13 @@ export async function runRender(scanId: string, jobId: string, reveal: RevealCho
     if (!force && now - lastWrite < 2500) return;
     lastWrite = now;
     const output: RenderProgress = { stage, percent: Math.max(0, Math.min(99, Math.round(percent))), heartbeat: new Date().toISOString() };
-    const { data } = await db.from("jobs").update({ output }).eq("id", jobId).eq("status", "running").select("id");
-    if (!data || data.length === 0) throw new Cancelled();
+    const { data, error } = await db.from("jobs").update({ output }).eq("id", jobId).eq("status", "running").select("id");
+    if (error) throw new Error(`Couldn't update the job in the database: ${error.message}`);
+    if (data && data.length > 0) return;
+    // Nothing updated: either the job was cancelled, or this server can't see the jobs table at all.
+    const problem = await jobAccessProblem(db, jobId);
+    if (problem) throw new Error(problem);
+    throw new Cancelled();
   };
 
   try {
@@ -201,11 +220,12 @@ export async function runRender(scanId: string, jobId: string, reveal: RevealCho
   } catch (err) {
     if (err instanceof Cancelled) return; // the job row already says "failed: Cancelled"
     console.error("Render failed:", err);
-    await db
+    const failed = await db
       .from("jobs")
       .update({ status: "failed", error: err instanceof Error ? err.message : "Render failed." })
       .eq("id", jobId)
       .eq("status", "running");
+    if (failed.error) console.error("Couldn't mark the job as failed:", failed.error.message);
   } finally {
     await rm(dir, { recursive: true, force: true }).catch(() => {});
   }
