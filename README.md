@@ -153,3 +153,17 @@ The AI script names the five best ingredients first, asks viewers to stay, then 
 ## Auto-advance steps
 
 Turn on "Auto-advance steps" at the top of a scan (saved in settings, off by default). After 2 minutes without a tap, the app does the next step for you, in order: script, voice, video (once you have uploaded clips; skipped until then), social copy, public page. A countdown with a Pause button shows what is next. Each step waits its own 2 minutes, a failure stops it, and Connect & Post is never automatic. It only runs while the page is open. AI animation (fal.ai) was removed; upload your own clips on the Video tab.
+
+## Best time to post and scheduled posts (Connect & Post tab)
+
+Once the final video is rendered, the **Best time to post** card suggests the next three strong slots for TikTok and YouTube (★ = best), picked from your Metricool "best time to post" data for @fooddiescanner (Eastern time). The scores live in `src/lib/post-schedule.ts` (`BEST_SLOTS`); refresh them from Metricool every few weeks as your own audience data builds up.
+
+- TikTok peaks at 10 AM, noon and 6 PM; YouTube peaks at 4 PM (2–5 PM). Wed and Thu are strongest; weekends score about half.
+- Posts on one platform are kept apart (TikTok 5 h, YouTube 20 h), counting other bookings and anything posted in the last day, so each new video gets the next free slot.
+- **Account connected:** "Schedule … post" books the slot. A Vercel cron (`vercel.json`, every 10 minutes) calls `/api/cron/publish`, which posts it through the same code as "Post now", using that tab's privacy and cover settings. A booking reached over 3 hours late is marked *missed* instead of posting at a bad time.
+- **Not connected yet:** schedule the suggested time in Metricool ("Copy time"), then press "I scheduled it in Metricool". That only reserves the slot so the next video's suggestion moves on.
+
+Setup:
+1. Run migration `0021_scheduled_posts.sql`.
+2. In Vercel, add the env var `CRON_SECRET` (any long random string). Vercel sends it to the cron automatically as `Authorization: Bearer …`.
+3. Redeploy. Vercel Cron every 10 minutes needs the **Pro** plan (Hobby runs crons at most once a day). On Hobby, point any external scheduler (for example Supabase `pg_cron` + `pg_net`, or cron-job.org) at `GET https://fooddiescanner.com/api/cron/publish` with that header.

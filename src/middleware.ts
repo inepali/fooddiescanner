@@ -21,6 +21,8 @@ export async function middleware(req: NextRequest) {
   // The install manifest and icons are fetched without credentials, so they can't sit behind the password.
   if (/^\/(manifest\.webmanifest|icon-\d+\.png|apple-touch-icon\.png)$/.test(path)) return NextResponse.next();
   if (path === "/terms" || path === "/privacy") return NextResponse.next();
+  // Vercel Cron: the route itself requires "Authorization: Bearer $CRON_SECRET".
+  if (path.startsWith("/api/cron/")) return NextResponse.next();
   // The homepage contact form.
   if (path === "/api/contact") return NextResponse.next();
   // Card photos of public scans (the route itself refuses private ones).
