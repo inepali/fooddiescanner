@@ -154,29 +154,10 @@ The AI script names the five best ingredients first, asks viewers to stay, then 
 
 Turn on "Auto-advance steps" at the top of a scan (saved in settings, off by default). After 2 minutes without a tap, the app does the next step for you, in order: script, voice, video (once you have uploaded clips; skipped until then), social copy, public page. A countdown with a Pause button shows what is next. Each step waits its own 2 minutes, a failure stops it, and Connect & Post is never automatic. It only runs while the page is open. AI animation (fal.ai) was removed; upload your own clips on the Video tab.
 
-## Best time to post and scheduled posts (Connect & Post tab)
+## Best time to post (Video and Connect & Post tabs)
 
-Once the final video is rendered, the **Best time to post** card suggests the next three strong slots for TikTok and YouTube (★ = best), picked from your Metricool "best time to post" data for @fooddiescanner (Eastern time). The scores live in `src/lib/post-schedule.ts` (`BEST_SLOTS`); refresh them from Metricool every few weeks as your own audience data builds up.
+Once the final video is rendered, the **Best time to post** card (under the video on the Video tab, and on Connect & Post) suggests the next three strong slots for TikTok and YouTube (★ = best), picked from your Metricool "best time to post" data for @fooddiescanner (Eastern time). The scores live in `src/lib/post-schedule.ts` (`BEST_SLOTS`); refresh them from Metricool every few weeks as your own audience data builds up.
 
 - TikTok peaks at 10 AM, noon and 6 PM; YouTube peaks at 4 PM (2–5 PM). Wed and Thu are strongest; weekends score about half.
-- Posts on one platform are kept apart (TikTok 5 h, YouTube 20 h), counting other bookings and anything posted in the last day, so each new video gets the next free slot.
-- **Account connected:** "Schedule … post" books the slot. A scheduler calls `/api/cron/publish` every 10 minutes (Supabase `pg_cron`, below); it posts it through the same code as "Post now", using that tab's privacy and cover settings. A booking reached over 3 hours late is marked *missed* instead of posting at a bad time.
-- **Not connected yet:** schedule the suggested time in Metricool ("Copy time"), then press "I scheduled it in Metricool". That only reserves the slot so the next video's suggestion moves on.
-
-Setup:
-1. Run migration `0021_scheduled_posts.sql`.
-2. In Vercel, add the env var `CRON_SECRET` (any long random string) and redeploy.
-3. Vercel Hobby only allows daily crons, so the 10-minute trigger runs in Supabase. Enable the `pg_cron` and `pg_net` extensions, store the secret in Vault, and schedule the call:
-
-```sql
-select vault.create_secret('YOUR_CRON_SECRET', 'cron_secret');
-select cron.schedule('publish-scheduled-posts', '*/10 * * * *', $$
-  select net.http_get(
-    url := 'https://fooddiescanner.com/api/cron/publish',
-    headers := jsonb_build_object('Authorization', 'Bearer ' ||
-      (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret'))
-  );
-$$);
-```
-
-(On Vercel Pro you can use a `vercel.json` cron for `/api/cron/publish` instead; Vercel sends the same header.)
+- Posting is manual: "Copy time", schedule it in Metricool (or use "Post now" at that time), then press **I scheduled it in Metricool**. That only reserves the slot (table `scheduled_posts`); the app never posts it.
+- Posts on one platform are kept apart (TikTok 5 h, YouTube 20 h), counting those reservations and anything posted from the app in the last day, so each new video gets the next free slot.

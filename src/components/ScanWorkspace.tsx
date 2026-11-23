@@ -980,11 +980,7 @@ export default function ScanWorkspace(props: StudioProps) {
           </button>
         </div>
       )}
-      {videoUrl && (
-        <p className="text-right text-xs text-neutral-500">
-          The best times to post this video are on the Connect &amp; Post tab.
-        </p>
-      )}
+      {videoUrl && <PostScheduler scanId={scanId} videoReady guarded={social.guarded} active={tab === "video"} />}
       </div>
       <div role="tabpanel" id="panel-social" aria-labelledby="tab-social" hidden={tab !== "social"} className="space-y-4 pt-4">
       <section className={card}>
@@ -1171,15 +1167,7 @@ export default function ScanWorkspace(props: StudioProps) {
       )}
       </div>
       <div role="tabpanel" id="panel-post" aria-labelledby="tab-post" hidden={tab !== "post"} className="space-y-4 pt-4">
-      <PostScheduler
-        scanId={scanId}
-        videoReady={Boolean(videoUrl)}
-        hasCopy={copy.length > 0}
-        guarded={social.guarded}
-        tiktokPrivacy={privacy}
-        youtubePrivacy={ytPrivacy}
-        coverSeconds={Number(coverSeconds) || 1}
-      />
+      <PostScheduler scanId={scanId} videoReady={Boolean(videoUrl)} guarded={social.guarded} active={tab === "post"} />
       <section className={card}>
         <h3 className="font-medium">Connect and post</h3>
         {!social.guarded && (

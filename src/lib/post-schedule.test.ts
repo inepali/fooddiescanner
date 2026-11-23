@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isMissed, localDate, slotLabel, suggestSlots, tzOffsetMinutes, zonedTime } from "./post-schedule.ts";
+import { localDate, slotLabel, suggestSlots, tzOffsetMinutes, zonedTime } from "./post-schedule.ts";
 
 test("time zone helpers handle EST, EDT and the day boundary", () => {
   assert.equal(tzOffsetMinutes(Date.UTC(2026, 10, 23, 12)), -300); // Nov: EST
@@ -39,10 +39,4 @@ test("taken slots push suggestions away by the minimum gap", () => {
   // Thu noon is within 5h of the booking, so it's skipped too.
   assert.ok(!s.some((x) => x.at === "2026-11-26T17:00:00.000Z"));
   assert.equal(s.find((x) => x.recommended)?.label, "Wed, Nov 25 · 10:00 AM ET");
-});
-
-test("a post the publisher reaches 3+ hours late is missed", () => {
-  const at = new Date("2026-11-25T15:00:00Z");
-  assert.equal(isMissed(at, new Date("2026-11-25T15:10:00Z")), false);
-  assert.equal(isMissed(at, new Date("2026-11-25T18:01:00Z")), true);
 });
