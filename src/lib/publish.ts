@@ -22,7 +22,7 @@ import {
 export type PublishOptions = { privacy?: string | null; again?: boolean; coverSeconds?: number | null };
 export type PublishedRow = { id: string; status: "processing" | "published" | "failed"; platform: Platform; permalink: string | null };
 
-// Sends a scan's final video and saved copy to a connected account. Used by "Post now" and by the scheduler.
+// Sends a scan's final video and saved copy to a connected account ("Post now").
 // TikTok and YouTube: upload the file. Instagram: gives it a short-lived link to fetch the Reel from.
 // Either way the post is "processing" until the platform finishes; the page then polls /api/social/posts/[id].
 export async function publishScan(id: string, platform: Platform, opts: PublishOptions = {}): Promise<PublishedRow> {

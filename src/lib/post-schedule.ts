@@ -38,7 +38,7 @@ export const BEST_SLOTS: Record<SchedulePlatform, Slot[]> = {
 
 /** Keep posts on one platform at least this far apart, so they don't compete with each other. */
 export const MIN_GAP_HOURS: Record<SchedulePlatform, number> = { tiktok: 5, youtube: 20 };
-/** Never suggest a slot sooner than this (time to review the video and schedule it). */
+/** Never suggest a slot sooner than this (time to review the video and schedule it in Metricool). */
 export const LEAD_MINUTES = 30;
 /** How far ahead to look for a good slot (4 days, so a Monday video can still reach Thursday). */
 export const WINDOW_HOURS = 96;
@@ -156,9 +156,3 @@ export function suggestSlots(
   });
 }
 
-/** A scheduled post is "missed" (not sent) if the publisher reaches it this late. */
-export const MISSED_AFTER_MINUTES = 180;
-
-export function isMissed(runAt: Date, now: Date = new Date()): boolean {
-  return now.getTime() - runAt.getTime() > MISSED_AFTER_MINUTES * 60000;
-}

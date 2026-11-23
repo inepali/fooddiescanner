@@ -1171,15 +1171,7 @@ export default function ScanWorkspace(props: StudioProps) {
       )}
       </div>
       <div role="tabpanel" id="panel-post" aria-labelledby="tab-post" hidden={tab !== "post"} className="space-y-4 pt-4">
-      <PostScheduler
-        scanId={scanId}
-        videoReady={Boolean(videoUrl)}
-        hasCopy={copy.length > 0}
-        guarded={social.guarded}
-        tiktokPrivacy={privacy}
-        youtubePrivacy={ytPrivacy}
-        coverSeconds={Number(coverSeconds) || 1}
-      />
+      <PostScheduler scanId={scanId} videoReady={Boolean(videoUrl)} guarded={social.guarded} />
       <section className={card}>
         <h3 className="font-medium">Connect and post</h3>
         {!social.guarded && (
