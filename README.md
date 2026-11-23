@@ -154,9 +154,9 @@ The AI script names the five best ingredients first, asks viewers to stay, then 
 
 Turn on "Auto-advance steps" at the top of a scan (saved in settings, off by default). After 2 minutes without a tap, the app does the next step for you, in order: script, voice, video (once you have uploaded clips; skipped until then), social copy, public page. A countdown with a Pause button shows what is next. Each step waits its own 2 minutes, a failure stops it, and Connect & Post is never automatic. It only runs while the page is open. AI animation (fal.ai) was removed; upload your own clips on the Video tab.
 
-## Best time to post (Connect & Post tab)
+## Best time to post (Video and Connect & Post tabs)
 
-Once the final video is rendered, the **Best time to post** card suggests the next three strong slots for TikTok and YouTube (★ = best), picked from your Metricool "best time to post" data for @fooddiescanner (Eastern time). The scores live in `src/lib/post-schedule.ts` (`BEST_SLOTS`); refresh them from Metricool every few weeks as your own audience data builds up.
+Once the final video is rendered, the **Best time to post** card (under the video on the Video tab, and on Connect & Post) suggests the next three strong slots for TikTok and YouTube (★ = best), picked from your Metricool "best time to post" data for @fooddiescanner (Eastern time). The scores live in `src/lib/post-schedule.ts` (`BEST_SLOTS`); refresh them from Metricool every few weeks as your own audience data builds up.
 
 - TikTok peaks at 10 AM, noon and 6 PM; YouTube peaks at 4 PM (2–5 PM). Wed and Thu are strongest; weekends score about half.
 - Posting is manual: "Copy time", schedule it in Metricool (or use "Post now" at that time), then press **I scheduled it in Metricool**. That only reserves the slot (table `scheduled_posts`); the app never posts it.

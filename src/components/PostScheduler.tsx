@@ -25,7 +25,18 @@ async function call<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-export default function PostScheduler({ scanId, videoReady, guarded }: { scanId: string; videoReady: boolean; guarded: boolean }) {
+// Shown on both the Video tab and the Connect & Post tab; `active` reloads it when its tab opens, so both stay in step.
+export default function PostScheduler({
+  scanId,
+  videoReady,
+  guarded,
+  active = true,
+}: {
+  scanId: string;
+  videoReady: boolean;
+  guarded: boolean;
+  active?: boolean;
+}) {
   const [data, setData] = useState<Data | null>(null);
   const [pick, setPick] = useState<Record<Platform, string | null>>({ tiktok: null, youtube: null });
   const [busy, setBusy] = useState<string | null>(null);
@@ -43,8 +54,8 @@ export default function PostScheduler({ scanId, videoReady, guarded }: { scanId:
   }, [scanId]);
 
   useEffect(() => {
-    if (videoReady) void load();
-  }, [videoReady, load]);
+    if (videoReady && active) void load();
+  }, [videoReady, active, load]);
 
   async function act(key: string, fn: () => Promise<string>, reload = true) {
     setBusy(key);
