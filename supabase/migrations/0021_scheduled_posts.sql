@@ -1,5 +1,5 @@
 -- Posts booked for a set time. The app suggests the time (best-time slots, src/lib/post-schedule.ts);
--- a Vercel cron (/api/cron/publish) sends due ones through the connected account.
+-- a 10-minute scheduler (/api/cron/publish) sends due ones through the connected account.
 --   via = 'app'        the app publishes it at run_at (needs the account connected)
 --   via = 'metricool'  you scheduled it in Metricool yourself; the row only reserves the slot
 --                      so the next suggestion moves on

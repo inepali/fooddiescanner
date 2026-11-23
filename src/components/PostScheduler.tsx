@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 // "Best time to post": the next good TikTok and YouTube slots for this video (src/lib/post-schedule.ts).
-// Connected account → book it and the app posts it on time (Vercel cron, /api/cron/publish).
+// Connected account → book it and the app posts it on time (/api/cron/publish, every 10 min).
 // Not connected yet → schedule that time in Metricool, then mark it here so the next video gets the next slot.
 
 type Platform = "tiktok" | "youtube";

@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 const BATCH = 4; // each upload can take ~30–60s
 const STUCK_MINUTES = 15;
 
-// Vercel Cron calls this every few minutes (vercel.json) with "Authorization: Bearer $CRON_SECRET".
+// Called every 10 minutes (Supabase pg_cron + pg_net, see README) with "Authorization: Bearer $CRON_SECRET".
 // It sends every booking whose time has come through the connected account.
 export const GET = handler(async (req) => {
   const secret = process.env.CRON_SECRET;
