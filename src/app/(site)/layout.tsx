@@ -46,6 +46,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               <Link href="/search" className="text-[#C9D3CB] hover:text-white">Search all scans</Link>
               <Link href="/#ingredients" className="text-[#C9D3CB] hover:text-white">Most-flagged ingredients</Link>
               <Link href="/#scoring" className="text-[#C9D3CB] hover:text-white">How scoring works</Link>
+              <Link href="/scoring-rubric" className="text-[#C9D3CB] hover:text-white">Scoring rubric</Link>
             </nav>
             <nav aria-label="About" className="flex flex-col gap-2.5 text-[15px]">
               <span className="font-bold text-white">About</span>

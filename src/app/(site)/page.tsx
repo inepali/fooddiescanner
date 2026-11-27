@@ -227,6 +227,9 @@ export default async function Home() {
               </li>
             ))}
           </ul>
+          <Link href="/scoring-rubric" className="self-start rounded-full bg-[#F2B705] px-5 py-2.5 font-semibold text-[#14201A] hover:bg-[#ffc81a]">
+            Read the full scoring rubric →
+          </Link>
         </div>
       </section>
 
