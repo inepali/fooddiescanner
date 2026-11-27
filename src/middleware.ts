@@ -20,7 +20,7 @@ export async function middleware(req: NextRequest) {
   // Terms and Privacy must be public: TikTok, Google and Meta reviewers open them without a password.
   // The install manifest and icons are fetched without credentials, so they can't sit behind the password.
   if (/^\/(manifest\.webmanifest|icon-\d+\.png|apple-touch-icon\.png)$/.test(path)) return NextResponse.next();
-  if (path === "/terms" || path === "/privacy") return NextResponse.next();
+  if (path === "/terms" || path === "/privacy" || path === "/scoring-rubric") return NextResponse.next();
   // The homepage contact form.
   if (path === "/api/contact") return NextResponse.next();
   // Card photos of public scans (the route itself refuses private ones).

@@ -50,9 +50,9 @@ export const EXTERNAL_WEIGHT = 0.4;
 
 // ---------- pure helpers (unit tested) ----------
 
-const NUTRI_POINTS: Record<string, number> = { a: 100, b: 75, c: 50, d: 25, e: 0 };
-const NOVA_POINTS: Record<number, number> = { 1: 100, 2: 80, 3: 45, 4: 10 };
-const GREEN_POINTS: Record<string, number> = { "a-plus": 100, a: 100, b: 75, c: 50, d: 25, e: 0 };
+export const NUTRI_POINTS: Record<string, number> = { a: 100, b: 75, c: 50, d: 25, e: 0 };
+export const NOVA_POINTS: Record<number, number> = { 1: 100, 2: 80, 3: 45, 4: 10 };
+export const GREEN_POINTS: Record<string, number> = { "a-plus": 100, a: 100, b: 75, c: 50, d: 25, e: 0 };
 
 /**
  * 0-100 score from the three grades. Health signals dominate: Nutri-Score 50%,
