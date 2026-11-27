@@ -50,6 +50,8 @@ export type RenderSegment = {
   speed?: number;
   /** "blur": show the whole frame, filling the sides with a blurred copy (nothing cropped). */
   fit?: "fill" | "blur";
+  /** Seconds into the source video to start from (video only). Default 0. */
+  offset?: number;
 };
 
 export type RenderOptions = {
@@ -87,7 +89,8 @@ export function buildFfmpegArgs(o: RenderOptions): string[] {
     if (seg.kind === "video") {
       const speed = seg.speed && seg.speed > 0 ? seg.speed : 1;
       // Slowed footage needs less source than output: speed 0.5 stretches 5 s of source over 10 s.
-      args.push("-stream_loop", "-1", "-t", (seg.duration * speed + 0.2).toFixed(3), "-i", seg.file);
+      const ss = seg.offset && seg.offset > 0 ? ["-ss", seg.offset.toFixed(3)] : [];
+      args.push("-stream_loop", "-1", ...ss, "-t", (seg.duration * speed + 0.2).toFixed(3), "-i", seg.file);
       const timing = `${speed !== 1 ? `setpts=(PTS-STARTPTS)/${speed},` : ""}trim=duration=${d},setpts=PTS-STARTPTS`;
       if (seg.fit === "blur") {
         filters.push(

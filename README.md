@@ -161,3 +161,12 @@ Once the final video is rendered, the **Best time to post** card (under the vide
 - TikTok peaks at 10 AM, noon and 6 PM; YouTube peaks at 4 PM (2–5 PM). Wed and Thu are strongest; weekends score about half.
 - Posting is manual: "Copy time", schedule it in Metricool (or use "Post now" at that time), then press **I scheduled it in Metricool**. That only reserves the slot (table `scheduled_posts`); the app never posts it.
 - Posts on one platform are kept apart (TikTok 5 h, YouTube 20 h), counting those reservations and anything posted from the app in the last day, so each new video gets the next free slot.
+
+## Comparison videos (New comparison)
+
+**+ New comparison** (sidebar; "Compare" on the phone tab bar) → pick 2 to 4 analyzed scans (search, filter All / Public / Has video) → one page with three steps:
+1. **Script & verdict**: the AI writes one ~3-minute script (420-540 words: hook, an intro per product, 3-5 head-to-head rounds, a countdown verdict, outro) and picks a winner and ranking from the facts. Set **Winner** to choose it yourself, then rewrite. Every line is editable; saving edits clears the voice and video.
+2. **Voiceover**: one ElevenLabs take with your default (cloned) voice. Guard: `MAX_COMPARE_VOICE_CHARS` (default 4500).
+3. **Video**: 1080x1920, 3-5 minutes. Each scene shows the footage of the product it talks about (uploaded videos and member videos, continuing where the last cut stopped; photos with a slow zoom when a product has no video), cuts of at most 9 s, a product label with its score at the top, captions, and the disclaimer at the end. Up to `COMPARE_CLIPS_PER_PRODUCT` (default 3) videos per product are used.
+
+Needs migration `0023_comparisons.sql`. With `RENDER_WORKER_URL` set, the render runs on the worker's new `POST /render-comparison`, so **rebuild and redeploy the worker** (see worker/README.md).

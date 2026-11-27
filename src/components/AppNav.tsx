@@ -28,6 +28,8 @@ export default function AppNav({ scanId }: { scanId?: string }) {
   const onHistory = path.startsWith("/history");
   const onReview = path.startsWith("/review") || path.startsWith("/invites") || path.startsWith("/contributors");
   const onProducts = path.startsWith("/products");
+  const onCompareNew = path === "/compare/new";
+  const onCompare = path.startsWith("/compare") && !onCompareNew;
   const cls = (active: boolean) =>
     `${link} ${active ? "bg-accent font-medium text-white" : "text-neutral-600 hover:text-neutral-900 md:hover:bg-neutral-100"}`;
 
@@ -35,6 +37,9 @@ export default function AppNav({ scanId }: { scanId?: string }) {
     <div className={`mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm md:mb-3 md:flex-col md:items-stretch md:gap-0.5 ${scanId ? "md:border-b md:pb-3" : ""}`}>
       <Link href="/scan" className={cls(onNew)} aria-current={onNew ? "page" : undefined}>
         + New scan
+      </Link>
+      <Link href="/compare/new" className={cls(onCompareNew)} aria-current={onCompareNew ? "page" : undefined}>
+        + New comparison
       </Link>
       <Link href="/history" className={cls(onHistory)} aria-current={onHistory ? "page" : undefined}>
         History
@@ -44,6 +49,9 @@ export default function AppNav({ scanId }: { scanId?: string }) {
       </Link>
       <Link href="/products" className={cls(onProducts)} aria-current={onProducts ? "page" : undefined}>
         Products to scan
+      </Link>
+      <Link href="/compare" className={cls(onCompare)} aria-current={onCompare ? "page" : undefined}>
+        Comparisons
       </Link>
       <form action="/api/auth/logout" method="post" className="md:mt-1">
         <button type="submit" className={`${link} text-neutral-500 hover:text-neutral-900 md:w-full md:text-left md:hover:bg-neutral-100`}>

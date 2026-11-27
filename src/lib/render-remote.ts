@@ -13,12 +13,21 @@ export function renderWorkerUrl(): string | null {
 
 /** Waits for the worker to finish the render. Never throws; a failed hand-off fails the job. */
 export async function renderOnWorker(url: string, scanId: string, jobId: string, reveal: RevealChoice): Promise<void> {
+  return callWorker(`${url}/render`, jobId, { scanId, jobId, reveal });
+}
+
+/** Same as renderOnWorker, for a comparison video (POST /render-comparison). */
+export async function renderComparisonOnWorker(url: string, comparisonId: string, jobId: string): Promise<void> {
+  return callWorker(`${url}/render-comparison`, jobId, { comparisonId, jobId });
+}
+
+async function callWorker(endpoint: string, jobId: string, payload: Record<string, unknown>): Promise<void> {
   let problem: string | null = null;
   try {
-    const res = await fetch(`${url}/render`, {
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.RENDER_WORKER_SECRET ?? ""}` },
-      body: JSON.stringify({ scanId, jobId, reveal }),
+      body: JSON.stringify(payload),
       // Just under the route's maxDuration (300 s).
       signal: AbortSignal.timeout(290_000),
     });

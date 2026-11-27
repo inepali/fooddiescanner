@@ -5,13 +5,14 @@ import { usePathname } from "next/navigation";
 
 const icon = "h-7 w-7";
 
-/** Phone-only bottom tab bar for the top-level screens (like iOS): Scan, History, Products and Review. */
+/** Phone-only bottom tab bar for the top-level screens (like iOS): Scan, History, Products, Compare and Review. */
 export default function TabBar() {
   const path = usePathname() ?? "";
   const onHistory = path.startsWith("/history");
   const onScan = path === "/scan" || path.startsWith("/new");
   const onReview = path.startsWith("/review") || path.startsWith("/invites") || path.startsWith("/contributors");
   const onProducts = path.startsWith("/products");
+  const onCompare = path.startsWith("/compare");
   const item = (active: boolean) =>
     `flex flex-1 flex-col items-center gap-0.5 pt-1.5 text-[10px] font-medium ${active ? "text-accent" : "text-neutral-500"}`;
   return (
@@ -39,6 +40,13 @@ export default function TabBar() {
           <path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" />
         </svg>
         Products
+      </Link>
+      <Link href="/compare/new" className={item(onCompare)} aria-current={onCompare ? "page" : undefined}>
+        <svg viewBox="0 0 24 24" className={icon} fill="none" stroke="currentColor" strokeWidth={onCompare ? 2.2 : 1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <rect x="3.5" y="5" width="7" height="14" rx="1.5" />
+          <rect x="13.5" y="5" width="7" height="14" rx="1.5" />
+        </svg>
+        Compare
       </Link>
       <Link href="/review" className={item(onReview)} aria-current={onReview ? "page" : undefined}>
         <svg viewBox="0 0 24 24" className={icon} fill="none" stroke="currentColor" strokeWidth={onReview ? 2.2 : 1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
