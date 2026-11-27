@@ -23,7 +23,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
         </Link>
         <nav aria-label="Main" className="hidden items-center gap-7 text-[15px] font-medium md:flex">
           <Link href="/#recent" className="text-[#14201A] hover:text-[#1E6B45]">Browse scans</Link>
-          <Link href="/#scoring" className="text-[#14201A] hover:text-[#1E6B45]">How scoring works</Link>
+          <Link href="/scoring-rubric" className="text-[#14201A] hover:text-[#1E6B45]">Scoring rubric</Link>
           <Link href="/#ingredients" className="text-[#14201A] hover:text-[#1E6B45]">Ingredients</Link>
           <Link href="/#contribute" className="text-[#14201A] hover:text-[#1E6B45]">Contribute</Link>
           <Link href="/#faq" className="text-[#14201A] hover:text-[#1E6B45]">FAQ</Link>
@@ -45,7 +45,6 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               <span className="font-bold text-white">Library</span>
               <Link href="/search" className="text-[#C9D3CB] hover:text-white">Search all scans</Link>
               <Link href="/#ingredients" className="text-[#C9D3CB] hover:text-white">Most-flagged ingredients</Link>
-              <Link href="/#scoring" className="text-[#C9D3CB] hover:text-white">How scoring works</Link>
               <Link href="/scoring-rubric" className="text-[#C9D3CB] hover:text-white">Scoring rubric</Link>
             </nav>
             <nav aria-label="About" className="flex flex-col gap-2.5 text-[15px]">
