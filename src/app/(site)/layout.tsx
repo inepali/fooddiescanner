@@ -58,7 +58,10 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
             </nav>
           </div>
           <div className="flex flex-wrap justify-between gap-4 border-t border-[#2F3D35] pt-6 text-[13px] text-[#A9B5AD]">
-            <span>© {new Date().getFullYear()} Fooddie Scanner · fooddiescanner.com</span>
+            <span>
+              © {new Date().getFullYear()} Fooddie Scanner · fooddiescanner.com ·{" "}
+              <Link href="/admin" rel="nofollow" className="text-[#A9B5AD] hover:text-white">Admin</Link>
+            </span>
             <span className="max-w-xl">For information and education only. Scores are our opinion, not medical or dietary advice. Not affiliated with any brand shown.</span>
           </div>
         </div>
