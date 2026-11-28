@@ -1,5 +1,6 @@
 import { generateText, TOO_LONG, type LlmImage } from "./llm.ts";
 import { DEFAULT_TONE, TONES, parseTone, type Tone } from "./tones.ts";
+import { HOOK_STYLES, hasBannedOpening, hookStyle, pickHookStyle, type HookStyle, type HookStyleId } from "./hooks.ts";
 
 export { DEFAULT_TONE, TONES, parseTone, type Tone };
 
@@ -18,7 +19,7 @@ export const SECTIONS: Section[] = ["hook", "good", "fair", "poor", "outro"];
 export type VideoScene = { seconds: number; visual: string; voiceover: string; photo?: number; section?: Section; custom?: boolean; edited?: boolean };
 /** The product the model suggests scanning next, so each video sets up the next one. */
 export type NextScan = { product: string; why: string; teaser: string; store?: string; /** Products-to-scan list item. */ targetId?: string };
-export type VideoScript = { title: string; scenes: VideoScene[]; next?: NextScan };
+export type VideoScript = { title: string; scenes: VideoScene[]; next?: NextScan; /** Opening style used (hooks.ts), so the next script picks a different one. */ hook?: HookStyleId };
 
 export type ScriptInput = {
   productName: string | null;
@@ -34,6 +35,10 @@ export type ScriptInput = {
   recentScans?: { name: string; score: number }[];
   /** Products-to-scan list to pick tomorrow's scan from (ref T1, T2…; see targets.ts). */
   targets?: { ref: string; product: string; store: string; compare_group: string | null; status: string }[];
+  /** Opening style for this script; picked by createScript when not set. */
+  hookStyle?: HookStyle;
+  /** Opening styles of the last few scripts (newest first), so the pick rotates. */
+  recentHooks?: string[];
 };
 
 export type Group = "good" | "fair" | "poor";
@@ -102,13 +107,6 @@ export function pickCandidates(ings: ScriptInput["ingredients"]): Record<Group, 
   };
 }
 
-/** A starting point for the hook: the surprise, never "I'll show you the five best and five worst". */
-function concerningHook(overall: number): string {
-  return overall >= 60
-    ? `"Everyone says skip this one. The label says otherwise."`
-    : `"Looks healthy, right? Read the second ingredient."`;
-}
-
 function overallFeel(overall: number): string {
   return overall >= 70 ? "mostly on the good side" : overall >= 45 ? "a mixed bag" : "mostly on the concerning side";
 }
@@ -154,10 +152,8 @@ export function buildPrompt(i: ScriptInput, compact = false) {
     : "";
   const bestHeader = nb === 0 ? "THE BEST ingredients" : nb === 1 ? "THE BEST ingredient" : `THE ${B.toUpperCase()} BEST ingredients`;
   const worstHeader = nw === 0 ? "THE WORST ingredients" : nw === 1 ? "THE WORST ingredient" : `THE ${W.toUpperCase()} WORST ingredients`;
-  const hookExample =
-    nw === 0
-      ? `"Is ${i.productName ? "this" : "this product"} actually healthy? ${nb === 1 ? "One" : B[0].toUpperCase() + B.slice(1)} ingredient${nb === 1 ? "" : "s"}. That's it."`
-      : concerningHook(i.overall);
+  const hook = i.hookStyle ?? HOOK_STYLES[0];
+  const hookExamples = hook.examples.map((e) => `"${e}"`).join(" or ");
   const goodStep =
     nb === 0
       ? `2. "good": skip this section (no ingredient here is on the good side); say so in one honest line inside the hook or the first "poor" scene.`
@@ -216,7 +212,7 @@ STORY PLAN: "${nb === 0 ? "no best" : best} first, ${nw === 0 ? "no worst" : wor
   }
 
 STRUCTURE (in this order, 7 to 9 scenes, "seconds" adding up to about 60; the retention hooks below are woven into these scenes, they are not extra scenes):
-1. "hook" (about 4 s): the most surprising TRUE thing about this label, said in the first two seconds, for example ${hookExample} The first sentence is 10 words or fewer and creates a curiosity gap or a contradiction about THIS product (see MAKE IT WORTH WATCHING). Within the first five seconds, say the product type in the plain words people type into search ("Is this cereal healthy?", "what's really in Oreos"), because TikTok search reads the speech. Never open by announcing the format or the counts ("I'll show you the five best and five worst"): that is the line viewers scroll past. Do not mention a score.
+1. "hook" (about 4 s): OPENING STYLE FOR THIS VIDEO, ${hook.rule} In the style of ${hookExamples}, but written fresh for THIS product: never copy an example word for word, and never invent a fact to fit the style. The first sentence is 10 words or fewer and is said in the first two seconds. NEVER start with "Healthy", "Is this healthy?", "Is this actually healthy?", "Looks healthy" or any one-word question: every video used to open that way and viewers scroll past it. Within the first five seconds, say the product type in the plain words people type into search ("this cereal", "what's in these crackers"), because TikTok search reads the speech. Never open by announcing the format or the counts ("I'll show you the five best and five worst"): that is the line viewers scroll past. Do not mention a score.
 ${goodStep}
 ${poorStep}
 4. "outro" (about 8 s): the verdict in words (no number), then a "Try this instead" tip: tell people what to look for in a better version of this kind of product, as concrete label rules they can check in the shop ("look for one with five ingredients or fewer and no added sugar"). Name no brands and invent no numbers beyond simple label rules. Include one short, quotable "send this to someone who…" line. Then the "next_scan" teaser, word for word, followed by "Follow so you don't miss it." Then finish with a short question that invites comments, such as "Do you eat this?", and one last short call to action: "Comment your answer." The video MUST end with that question followed by that call to action.
@@ -228,11 +224,11 @@ KEEP PEOPLE WATCHING (retention hooks). Viewers tend to drop off around 10-15 se
 - Closing hook: end the "outro" with the takeaway, the "Try this instead" tip, tomorrow's teaser with "Follow so you don't miss it.", the final question and the comment call to action from rule 4.
 Pay each teaser off within the next 10-20 seconds. A teaser must never promise something the video does not deliver, and must not be clickbait, a scare tactic or a numeric score. Plan the scene lengths so a scene boundary lands near 0:15 and near 0:35.
 MAKE IT WORTH WATCHING AND SHARING (story craft). Treat the label like a short mystery with a reveal, not a list:
-- Hook formats that work (pick the one that fits the facts, never invent a claim): (a) contradiction, "The front says 'natural'. Let's read the back."; (b) a question people want answered, "What's the first thing on this label? Not what you think."; (c) a challenge, "Guess which ingredient shows up second."; (d) stakes, "Read this before it goes in your cart." Open with the most surprising TRUE thing about this label, not with "Hey guys" or "Today I'm looking at".
+- Use the opening style given in rule 1, built on the most surprising TRUE thing about this label. Never open with "Hey guys" or "Today I'm looking at".
 - Plain words beat jargon: if you name a rating such as Nutri-Score or NOVA group, say what it means right after in everyday words ("NOVA group 4. That means ultra-processed."). E-numbers and chemical names get a plain-words nickname ("a flavor booster called E621").
 - Use label order as drama: ingredients are listed from most to least, so where an ingredient sits is a real, checkable fact ("Sugar is number two. Ingredients are listed by amount, so that's a lot.").
 - One vivid comparison per video, qualitative only ("reads more like a dessert recipe than breakfast"). No made-up numbers, statistics or studies.
-- Rhythm: short punchy sentences, mostly 10 words or fewer, with a beat of contrast ("Looks healthy. Reads differently."). Speak to "you". Strong verbs. No filler, no throat-clearing, no repeating the product name more than twice.
+- Rhythm: short punchy sentences, mostly 10 words or fewer, with a beat of contrast ("Looks simple. Reads differently."). Speak to "you". Strong verbs. No filler, no throat-clearing, no repeating the product name more than twice.
 - Build tension: save the most surprising or most concerning ingredient for the final stretch, then pay it off clearly. Give the good news honestly too, so people trust you.
 - Feel, don't scare: aim for "wait, really?" and "I'm sending this to my mum", never fear or shame. Stay truthful: a shareable video is one people can fact-check.
 - "title": a short, curiosity-driven title (under 60 characters) that promises something this video delivers.
@@ -289,7 +285,8 @@ export function parseScript(text: string): VideoScript {
 
   const title = typeof data.title === "string" && data.title.trim() ? data.title.trim() : "Ingredient check";
   const next = parseNext(data.next_scan ?? data.next);
-  return { title, scenes, ...(next ? { next } : {}) };
+  const hook = hookStyle(typeof data.hook === "string" ? data.hook : undefined)?.id;
+  return { title, scenes, ...(next ? { next } : {}), ...(hook ? { hook } : {}) };
 }
 
 function parseNext(v: unknown): NextScan | null {
@@ -395,7 +392,14 @@ export function fixCounts(script: VideoScript, best: number, worst: number): Vid
   return scenes.length ? { ...script, scenes } : script;
 }
 
-export async function createScript(input: ScriptInput): Promise<VideoScript> {
+export async function createScript(rawInput: ScriptInput): Promise<VideoScript> {
+  const style = rawInput.hookStyle ?? pickHookStyle(rawInput.recentHooks);
+  const input = { ...rawInput, hookStyle: style };
+  const result = await writeScript(input);
+  return { ...result, hook: style.id };
+}
+
+async function writeScript(input: ScriptInput): Promise<VideoScript> {
   const base = buildPrompt(input);
   const counts = labelCounts(input.ingredients);
   let prompt = base;
@@ -429,6 +433,12 @@ export async function createScript(input: ScriptInput): Promise<VideoScript> {
     }
     const words = wordCount(script);
     const countError = wrongCount(script, counts.best, counts.worst);
+    if (attempt < 2 && hasBannedOpening(script.scenes[0]?.voiceover ?? "")) {
+      // Opened with "Is this healthy?" again: ask once more for the chosen style.
+      if (!best) best = script;
+      prompt = `${compactPrompt ? buildPrompt(input, true) : base}\n\nYour previous draft opened with "${script.scenes[0].voiceover.split(/[.?!]/)[0]}", which is banned. Rewrite it with an opening in this style: ${input.hookStyle?.rule ?? ""}`;
+      continue;
+    }
     if (!countError && words >= MIN_WORDS && words <= MAX_WORDS) return script;
     if (countError && attempt === 2 && !best) return script; // never fail the whole step over wording
     if (countError) {

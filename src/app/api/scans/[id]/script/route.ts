@@ -64,6 +64,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .filter((r) => r.overall_score !== null)
     .map((r) => ({ name: r.product_name as string, score: r.overall_score as number }));
 
+  // Opening styles of the latest scripts (any scan), so each new video opens differently.
+  const { data: recentVideos } = await db
+    .from("videos")
+    .select("script")
+    .not("script", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(5);
+  const recentHooks = (recentVideos ?? []).flatMap((v) => {
+    try {
+      const hook = (JSON.parse(v.script as string) as { hook?: unknown }).hook;
+      return typeof hook === "string" ? [hook] : [];
+    } catch {
+      return [];
+    }
+  });
+
   // The products-to-scan list: tick this product off, and offer its rivals as tomorrow's scan.
   const { data: targetRows } = await db
     .from("scan_targets")
@@ -92,6 +108,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       photos,
       tone,
       recentScans,
+      recentHooks,
       targets: candidates,
       ingredients: (ings ?? []).map((i) => ({ name: i.raw_name, score: i.score, reason: i.reason })),
     });
