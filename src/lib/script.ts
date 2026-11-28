@@ -215,13 +215,13 @@ STRUCTURE (in this order, 7 to 9 scenes, "seconds" adding up to about 60; the re
 1. "hook" (about 4 s): OPENING STYLE FOR THIS VIDEO, ${hook.rule} In the style of ${hookExamples}, but written fresh for THIS product: never copy an example word for word, and never invent a fact to fit the style. The first sentence is 10 words or fewer and is said in the first two seconds. NEVER start with "Healthy", "Is this healthy?", "Is this actually healthy?", "Looks healthy" or any one-word question: every video used to open that way and viewers scroll past it. Within the first five seconds, say the product type in the plain words people type into search ("this cereal", "what's in these crackers"), because TikTok search reads the speech. Never open by announcing the format or the counts ("I'll show you the five best and five worst"): that is the line viewers scroll past. Do not mention a score.
 ${goodStep}
 ${poorStep}
-4. "outro" (about 8 s): the verdict in words (no number), then a "Try this instead" tip: tell people what to look for in a better version of this kind of product, as concrete label rules they can check in the shop ("look for one with five ingredients or fewer and no added sugar"). Name no brands and invent no numbers beyond simple label rules. Include one short, quotable "send this to someone who…" line. Then the "next_scan" teaser, word for word, followed by "Follow so you don't miss it." Then finish with a short question that invites comments, such as "Do you eat this?", and one last short call to action: "Comment your answer." The video MUST end with that question followed by that call to action.
+4. "outro" (about 8 s): the verdict in words (no number), then a "Try this instead" tip: tell people what to look for in a better version of this kind of product, as concrete label rules they can check in the shop ("look for one with five ingredients or fewer and no added sugar"). Name no brands and invent no numbers beyond simple label rules. Include one short, quotable "send this to someone who…" line. Then the "next_scan" teaser, word for word. Then a short question that invites comments, such as "Do you eat this?" or "Would you still buy it?". Then ONE closing line, 20 words or fewer, in your own words and the tone above, that asks viewers to comment their answer, like the video, and follow (or subscribe) for tomorrow's scan. Say it the way a friendly creator talks to camera, for example "Tell me in the comments, and if this helped, give it a like and follow for tomorrow's." or "Drop your answer below. Like and subscribe so you catch the next one." Never copy those word for word, and never rattle off a robotic list like "Like, comment and subscribe!". The video MUST end with that question followed by that closing line.
 Do not use a "fair" scene. Cover exactly the ingredients in the two lists above, no more and no fewer, and use their real counts.
 
 KEEP PEOPLE WATCHING (retention hooks). Viewers tend to drop off around 10-15 seconds, so plant three hooks. Count time at about 2.5 spoken words per second:
 - Hook at about 0:15: the last sentence of the scene that ends near the 15-second mark is an open-loop teaser that makes people stay for what comes next, for example "But wait until you hear what's hiding in the next one." Name no ingredient and no number in the teaser itself.
 - Hook at about 0:35: the last sentence of the scene that ends near the 35-second mark is a second, stronger teaser pointing at the most concerning ingredient, which you save for after this point (put the very worst one in the final stretch). If nothing on the label is concerning, tease the one thing that surprised you.
-- Closing hook: end the "outro" with the takeaway, the "Try this instead" tip, tomorrow's teaser with "Follow so you don't miss it.", the final question and the comment call to action from rule 4.
+- Closing hook: end the "outro" with the takeaway, the "Try this instead" tip, tomorrow's teaser, the final question and the friendly comment, like and follow line from rule 4.
 Pay each teaser off within the next 10-20 seconds. A teaser must never promise something the video does not deliver, and must not be clickbait, a scare tactic or a numeric score. Plan the scene lengths so a scene boundary lands near 0:15 and near 0:35.
 MAKE IT WORTH WATCHING AND SHARING (story craft). Treat the label like a short mystery with a reveal, not a list:
 - Use the opening style given in rule 1, built on the most surprising TRUE thing about this label. Never open with "Hey guys" or "Today I'm looking at".
@@ -303,19 +303,47 @@ function parseNext(v: unknown): NextScan | null {
   return { product, why: str(o.why, 300), teaser: str(o.teaser, 160), ...(store ? { store } : {}), ...(targetId ? { targetId } : {}) };
 }
 
-const CTA = "Comment your answer.";
-const ENDS_WITH_CTA = /\b(like|comment|follow)\b[^?]*$/i;
+/** Friendly closing lines (comment + like + follow/subscribe), used when the model's ending misses one of them. */
+export const CLOSERS = [
+  "Tell me in the comments, and if this helped, give it a like and follow for tomorrow's.",
+  "Drop your answer below. And hit like and follow so you catch the next one.",
+  "Let me know in the comments. Like and subscribe if you want more of these.",
+  "Comment your answer, give this a like, and follow along for tomorrow's scan.",
+];
+const ASKS_COMMENT = /\b(comments?|commenting|below|let me know|tell me)\b/i;
+const ASKS_LIKE = /\blike\b/i;
+const ASKS_FOLLOW = /\b(follow|subscribe)\b/i;
+/** A short "comment" call to action on its own, such as the old "Comment your answer.": replaced, not repeated. */
+const BARE_CTA = /\s*(?:(?:comment|drop|tell me|let me know)[^.!?]{0,40}|(?:like and comment|comment and like)[^.!?]{0,30})[.!]?\s*$/i;
 
-/** Every script must end on a question, then a like-and-comment call to action. If the model forgot either, add it. */
+function closerFor(script: VideoScript): string {
+  let h = 0;
+  for (const ch of script.title) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return CLOSERS[h % CLOSERS.length];
+}
+
+/** True when the words after the last question ask for a comment, a like and a follow (or subscribe). */
+export function hasClosingCta(text: string): boolean {
+  if (!text.includes("?")) return false;
+  const tail = text.slice(text.lastIndexOf("?") + 1);
+  return ASKS_COMMENT.test(tail) && ASKS_LIKE.test(tail) && ASKS_FOLLOW.test(tail);
+}
+
+/**
+ * Every script must end on a question, then a friendly line asking to comment, like and follow.
+ * If the model forgot either, add it (a bare "Comment your answer." is swapped for the full line).
+ */
 export function ensureHook(script: VideoScript): VideoScript {
   const last = script.scenes[script.scenes.length - 1];
   if (!last || last.edited) return script; // you wrote the ending yourself: leave it as is
   const text = last.voiceover.trim();
   let out = text;
-  if (!ENDS_WITH_CTA.test(out) || !out.includes("?")) {
-    const q = /\?["')\]\s]*$/.test(out) || (ENDS_WITH_CTA.test(out) && out.includes("?"));
-    if (!q) out = `${out} Do you eat this?`;
-    if (!ENDS_WITH_CTA.test(out.slice(out.lastIndexOf("?") + 1))) out = `${out} ${CTA}`;
+  if (!hasClosingCta(out)) {
+    if (!out.includes("?")) out = `${out} Do you eat this?`;
+    const q = out.lastIndexOf("?");
+    let tail = out.slice(q + 1);
+    if (BARE_CTA.test(tail) && !ASKS_FOLLOW.test(tail)) tail = tail.replace(BARE_CTA, "");
+    out = `${out.slice(0, q + 1)}${tail.trimEnd()} ${closerFor(script)}`.replace(/\s+/g, " ").trim();
   }
   if (out === text) return script;
   const scenes = script.scenes.slice(0, -1);
