@@ -126,7 +126,7 @@ test("parseVoices puts your own voices first, then defaults, then library voices
   assert.deepEqual(parseVoices(null), []);
 });
 
-import { MAX_WORDS, MIN_WORDS, buildPrompt, wrongCount, fixCounts, ensureHook, wordCount, groupFor, parseTone, pickCandidates } from "./script.ts";
+import { CLOSERS, hasClosingCta, MAX_WORDS, MIN_WORDS, buildPrompt, wrongCount, fixCounts, ensureHook, wordCount, groupFor, parseTone, pickCandidates } from "./script.ts";
 
 const ings = [
   { name: "Water", score: 95, reason: "Hydrating." },
@@ -234,14 +234,18 @@ test("fixCounts corrects old scripts: real counts, and no worry talk when nothin
   assert.equal(custom.scenes[0].voiceover, "My five worst picks."); // your own lines are left alone
 });
 
-test("ensureHook ends on a question plus a like-and-comment line", () => {
+test("ensureHook ends on a question plus a comment, like and follow line", () => {
   const one = (voiceover: string) => ({ title: "T", scenes: [{ seconds: 5, visual: "v", voiceover }] });
   const end = (v: string) => ensureHook(one(v)).scenes[0].voiceover;
-  assert.equal(end("Skip the sugary stuff."), "Skip the sugary stuff. Do you eat this? Comment your answer.");
-  assert.equal(end("Would you still eat this?"), "Would you still eat this? Comment your answer.");
-  assert.equal(end('Be honest, "do you eat this?"'), 'Be honest, "do you eat this?" Comment your answer.');
-  const done = one("Would you eat this? Like and comment below.");
+  const closer = end("Do you eat this?").replace("Do you eat this? ", "");
+  assert.ok(CLOSERS.includes(closer));
+  assert.equal(end("Skip the sugary stuff."), `Skip the sugary stuff. Do you eat this? ${closer}`);
+  assert.equal(end("Would you still eat this?"), `Would you still eat this? ${closer}`);
+  assert.equal(end('Be honest, "do you eat this?"'), `Be honest, "do you eat this?" ${closer}`);
+  assert.equal(end("Would you eat this? Comment your answer."), `Would you eat this? ${closer}`); // old ending upgraded, not doubled
+  const done = one("Would you eat this? Tell me below, and like and follow for more.");
   assert.equal(ensureHook(done), done); // already complete: untouched
+  for (const c of CLOSERS) assert.ok(hasClosingCta(`Do you? ${c}`), c);
 });
 
 test("parseScript keeps valid sections; parseTone falls back", () => {
